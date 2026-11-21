@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Goal &bull; FINORA{% endblock %}
+{% block header_title %}Edit Savings Goal{% endblock %}
+{% block header_subtitle %}Adjust target milestones and savings timeline{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+  <div class="finora-card">
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem;">
+      Update Goal: {{ goal.title }}
+    </h3>
+
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group-finora">
+        <label class="form-label-finora">Goal Name</label>
+        {{ form.title }}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Target Amount ({{ user_currency_symbol }})</label>
+          {{ form.target_amount }}
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Current Saved Amount ({{ user_currency_symbol }})</label>
+          {{ form.current_amount }}
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Target Date</label>
+          {{ form.target_date }}
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Status</label>
+          {{ form.status }}
+        </div>
+      </div>
+
+      <div class="form-group-finora">
+        <label class="form-label-finora">Card Color Accent</label>
+        {{ form.color }}
+      </div>
+
+      <div class="form-group-finora">
+        <label class="form-label-finora">Notes</label>
+        {{ form.notes }}
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <a href="{% url 'goals' %}" class="btn-finora btn-secondary-finora">Cancel</a>
+        <button type="submit" class="btn-finora btn-primary-finora">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

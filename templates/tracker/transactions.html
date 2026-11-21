@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Transactions &bull; FINORA{% endblock %}
+{% block header_title %}Transactions Ledger{% endblock %}
+{% block header_subtitle %}Search, filter, and inspect your full transaction history{% endblock %}
+
+{% block content %}
+<!-- Filter & Search Panel -->
+<div class="finora-card" style="margin-bottom: 1.5rem;">
+  <form method="GET" action="{% url 'transactions' %}" id="filter-form">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: flex-end;">
+      <!-- Search Input -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Search Keyword</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control-finora" placeholder="Title, notes or merchant...">
+      </div>
+
+      <!-- Type Filter -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Type</label>
+        <select name="type" class="form-control-finora form-select-finora">
+          <option value="">All Types</option>
+          <option value="EXPENSE" {% if tx_type == 'EXPENSE' %}selected{% endif %}>Expenses Only</option>
+          <option value="INCOME" {% if tx_type == 'INCOME' %}selected{% endif %}>Income Only</option>
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Category</label>
+        <select name="category" class="form-control-finora form-select-finora">
+          <option value="">All Categories</option>
+          {% for c in categories %}
+          <option value="{{ c.id }}" {% if selected_category == c.id|stringformat:"s" %}selected{% endif %}>
+            {{ c.name }} ({{ c.get_type_display }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Payment Method</label>
+        <select name="payment_method" class="form-control-finora form-select-finora">
+          <option value="">All Methods</option>
+          {% for val, name in payment_methods %}
+          <option value="{{ val }}" {% if selected_payment_method == val %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Date Presets -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Date Range</label>
+        <select name="preset" class="form-control-finora form-select-finora">
+          <option value="">All Dates</option>
+          <option value="this_month" {% if date_preset == 'this_month' %}selected{% endif %}>This Month</option>
+          <option value="last_month" {% if date_preset == 'last_month' %}selected{% endif %}>Last Month</option>
+          <option value="this_year" {% if date_preset == 'this_year' %}selected{% endif %}>This Year</option>
+        </select>
+      </div>
+
+      <!-- Min Amount -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Min Amount ({{ user_currency_symbol }})</label>
+        <input type="number" step="0.01" name="min_amount" value="{{ min_amount|default:'' }}" class="form-control-finora" placeholder="Min {{ user_currency_symbol }}">
+      </div>
+
+      <!-- Max Amount -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Max Amount ({{ user_currency_symbol }})</label>
+        <input type="number" step="0.01" name="max_amount" value="{{ max_amount|default:'' }}" class="form-control-finora" placeholder="Max {{ user_currency_symbol }}">
+      </div>
+
+      <!-- Sort Filter -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Sort By</label>
+        <select name="sort" class="form-control-finora form-select-finora">
+          <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Date (Newest First)</option>
+          <option value="date_asc" {% if sort_by == 'date_asc' %}selected{% endif %}>Date (Oldest First)</option>
+          <option value="amount_desc" {% if sort_by == 'amount_desc' %}selected{% endif %}>Amount (Highest First)</option>
+          <option value="amount_asc" {% if sort_by == 'amount_asc' %}selected{% endif %}>Amount (Lowest First)</option>
+        </select>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 0.5rem;">
+        <button type="submit" class="btn-finora btn-primary-finora" style="flex: 1;">
+          <i data-lucide="filter"></i> Filter
+        </button>
+        <a href="{% url 'transactions' %}" class="btn-finora btn-secondary-finora" title="Reset Filters">
+          <i data-lucide="rotate-ccw"></i>
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Ledger Summary Bar -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+  <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+    <div style="font-size: 0.88rem; color: var(--text-muted);">
+      Filtered Income: <span style="font-weight: 700; color: var(--emerald-green);">+{{ user_currency_symbol }}{{ filtered_income|floatformat:2|intcomma }}</span>
+    </div>
+    <div style="font-size: 0.88rem; color: var(--text-muted);">
+      Filtered Expenses: <span style="font-weight: 700; color: var(--coral-red);">-{{ user_currency_symbol }}{{ filtered_expense|floatformat:2|intcomma }}</span>
+    </div>
+    <div style="font-size: 0.88rem; color: var(--text-muted);">
+      Net: <span style="font-weight: 700; color: var(--electric-blue);">{{ user_currency_symbol }}{{ filtered_net|floatformat:2|intcomma }}</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <button type="button" class="btn-finora btn-secondary-finora" onclick="openFinoraModal('importCsvModal')" style="font-size: 0.82rem;">
+      <i data-lucide="upload"></i> Import CSV
+    </button>
+    <a href="{% url 'export_csv' %}?q={{ q }}&type={{ tx_type }}&category={{ selected_category }}&start_date={{ start_date }}&end_date={{ end_date }}&min_amount={{ min_amount }}&max_amount={{ max_amount }}" class="btn-finora btn-secondary-finora" style="font-size: 0.82rem;">
+      <i data-lucide="download"></i> Export Filtered CSV
+    </a>
+    <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('globalTxModal')" style="font-size: 0.82rem;">
+      <i data-lucide="plus"></i> New Transaction
+    </button>
+  </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="finora-card">
+  <div class="finora-table-wrapper">
+    <table class="finora-table">
+      <thead>
+        <tr>
+          <th>Transaction</th>
+          <th>Category</th>
+          <th>Date</th>
+          <th>Payment Method</th>
+          <th style="text-align: right;">Amount</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in page_obj %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div class="kpi-icon-pill {% if tx.type == 'INCOME' %}green{% else %}red{% endif %}" style="width: 32px; height: 32px; border-radius: 8px;">
+                <i data-lucide="{% if tx.type == 'INCOME' %}arrow-down-left{% else %}arrow-up-right{% endif %}" style="width: 16px; height: 16px;"></i>
+              </div>
+              <div>
+                <div style="font-weight: 600; color: var(--text-main);">{{ tx.title }}</div>
+                {% if tx.notes %}
+                <div style="font-size: 0.75rem; color: var(--text-dim);">{{ tx.notes|truncatechars:45 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if tx.category %}
+            <span class="category-badge">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ tx.category.color }};"></span>
+              {{ tx.category.name }}
+            </span>
+            {% else %}
+            <span class="category-badge">General</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.82rem;">
+            <div style="font-weight: 500;">{{ tx.date|date:"d M Y" }}</div>
+            {% if tx.time %}
+            <div style="font-size: 0.7rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.25rem;">
+              <i data-lucide="clock" style="width: 10px; height: 10px;"></i> {{ tx.time|time:"H:i" }}
+            </div>
+            {% endif %}
+          </td>
+          <td>
+            <span style="font-size: 0.78rem; color: var(--text-dim); text-transform: uppercase;">
+              {{ tx.get_payment_method_display }}
+            </span>
+          </td>
+          <td style="text-align: right;">
+            <span class="{% if tx.type == 'INCOME' %}amount-income{% else %}amount-expense{% endif %}" style="font-size: 0.95rem;">
+              {% if tx.type == 'INCOME' %}+{% else %}-{% endif %} {{ user_currency_symbol }}{{ tx.amount|floatformat:2|intcomma }}
+            </span>
+          </td>
+          <td style="text-align: right;">
+            <div style="display: flex; justify-content: flex-end; gap: 0.4rem;">
+              <a href="{% url 'transaction_update' tx.pk %}" class="btn-icon" style="width: 30px; height: 30px;" title="Edit Transaction">
+                <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
+              </a>
+              <form action="{% url 'transaction_delete' tx.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Permanently remove transaction \'{{ tx.title|escapejs }}\'?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-icon" style="width: 30px; height: 30px; color: var(--coral-red);" title="Delete Transaction">
+                  <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-dim);">
+            <i data-lucide="search-x" style="width: 42px; height: 42px; margin-bottom: 0.75rem; color: var(--text-dim);"></i>
+            <div style="font-size: 1rem; font-weight: 600; color: var(--text-muted);">No transactions match your current filters</div>
+            <div style="font-size: 0.82rem; margin-top: 0.25rem;">Try adjusting your search criteria or clear filters.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  {% if page_obj.has_other_pages %}
+  <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 0.5rem 0.25rem; border-top: 1px solid var(--border-subtle); margin-top: 1rem;">
+    <span style="font-size: 0.82rem; color: var(--text-dim);">
+      Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} total records)
+    </span>
+    <div style="display: flex; gap: 0.4rem;">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&type={{ tx_type }}&category={{ selected_category }}&preset={{ date_preset }}&sort={{ sort_by }}" class="btn-finora btn-secondary-finora" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+        &laquo; Previous
+      </a>
+      {% endif %}
+
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&type={{ tx_type }}&category={{ selected_category }}&preset={{ date_preset }}&sort={{ sort_by }}" class="btn-finora btn-secondary-finora" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+        Next &raquo;
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- CSV Import Modal -->
+<div class="finora-modal-backdrop" id="importCsvModal">
+  <div class="finora-modal-box">
+    <div class="finora-modal-header">
+      <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="upload-cloud" style="color: var(--electric-blue);"></i> Import Transactions from CSV
+      </h3>
+      <button class="btn-icon" onclick="closeFinoraModal('importCsvModal')" style="width: 30px; height: 30px;">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+    <form action="{% url 'import_csv' %}" method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="finora-modal-body">
+        <p style="font-size: 0.82rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.5;">
+          Upload a spreadsheet or bank export (.csv). FINORA automatically detects columns such as <code>Date</code>, <code>Title / Description</code>, <code>Amount</code>, <code>Type</code>, <code>Category</code>, and <code>Payment Method</code>.
+        </p>
+
+        <div class="form-group-finora">
+          <label class="form-label-finora">Choose CSV File</label>
+          <input type="file" name="csv_file" accept=".csv" class="form-control-finora" required>
+        </div>
+
+        <div style="background: var(--bg-surface); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">
+          <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">Supported Columns:</div>
+          Date (YYYY-MM-DD or DD/MM/YYYY), Title, Amount, Type (INCOME / EXPENSE), Category, Payment Method, Notes.
+        </div>
+      </div>
+      <div class="finora-modal-footer">
+        <button type="button" class="btn-finora btn-secondary-finora" onclick="closeFinoraModal('importCsvModal')">Cancel</button>
+        <button type="submit" class="btn-finora btn-primary-finora">Upload &amp; Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Analytics &bull; FINORA{% endblock %}
+{% block header_title %}Financial Analytics{% endblock %}
+{% block header_subtitle %}Longitudinal cashflow modeling, category allocation, and burn velocity for {{ current_year }}{% endblock %}
+
+{% block content %}
+<!-- Annual Telemetry Strip -->
+<div class="kpi-grid">
+  <div class="finora-card kpi-card income">
+    <div class="kpi-header">
+      <span class="kpi-title">{{ current_year }} Total Inflow</span>
+      <div class="kpi-icon-pill green"><i data-lucide="trending-up"></i></div>
+    </div>
+    <div class="kpi-value" style="color: var(--emerald-green);">
+      {{ user_currency_symbol }}{{ year_income|floatformat:2|intcomma }}
+    </div>
+    <div class="kpi-footer">Cumulative earned capital this year</div>
+  </div>
+
+  <div class="finora-card kpi-card expense">
+    <div class="kpi-header">
+      <span class="kpi-title">{{ current_year }} Total Spend</span>
+      <div class="kpi-icon-pill red"><i data-lucide="trending-down"></i></div>
+    </div>
+    <div class="kpi-value" style="color: var(--coral-red);">
+      {{ user_currency_symbol }}{{ year_expense|floatformat:2|intcomma }}
+    </div>
+    <div class="kpi-footer">Cumulative capital deployed this year</div>
+  </div>
+
+  <div class="finora-card kpi-card savings">
+    <div class="kpi-header">
+      <span class="kpi-title">{{ current_year }} Net Retained</span>
+      <div class="kpi-icon-pill purple"><i data-lucide="shield-check"></i></div>
+    </div>
+    <div class="kpi-value" style="color: var(--soft-purple);">
+      {{ user_currency_symbol }}{{ year_savings|floatformat:2|intcomma }}
+    </div>
+    <div class="kpi-footer">Savings Rate: <b style="color: var(--electric-blue);">{{ savings_rate }}%</b> of total income</div>
+  </div>
+</div>
+
+<!-- Behavioral Insights & Spending Patterns Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
+  <!-- Highest Spending Category -->
+  <div class="finora-card finora-card-interactive" style="border-left: 4px solid var(--electric-blue);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+      <div>
+        <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Highest Spending Category</span>
+        <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">
+          {% if highest_spending_category %}
+            <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background-color: {{ highest_spending_category.category__color }};"></span>
+              {{ highest_spending_category.category__name }}
+            </span>
+          {% else %}
+            <span>None</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="kpi-icon-pill blue" style="width: 28px; height: 28px;"><i data-lucide="award" style="width: 15px; height: 15px;"></i></div>
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-dim);">
+      {% if highest_spending_category %}
+      {{ user_currency_symbol }}{{ highest_spending_category.total|floatformat:2|intcomma }} (<b>{{ highest_cat_pct }}%</b> of expenses)
+      {% else %}
+      No expense data yet
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Budget Utilization Rate -->
+  <div class="finora-card finora-card-interactive" style="border-left: 4px solid {% if budget_utilization_pct >= 100 %}var(--coral-red){% elif budget_utilization_pct >= 80 %}var(--amber-warning){% else %}var(--emerald-green){% endif %};">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+      <div>
+        <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Monthly Budget Utilization</span>
+        <div style="font-size: 1.15rem; font-weight: 800; color: {% if budget_utilization_pct >= 100 %}var(--coral-red){% elif budget_utilization_pct >= 80 %}var(--amber-warning){% else %}var(--emerald-green){% endif %}; margin-top: 0.2rem;">
+          {{ budget_utilization_pct }}%
+        </div>
+      </div>
+      <div class="kpi-icon-pill {% if budget_utilization_pct >= 100 %}red{% elif budget_utilization_pct >= 80 %}yellow{% else %}green{% endif %}" style="width: 28px; height: 28px;">
+        <i data-lucide="gauge" style="width: 15px; height: 15px;"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-dim);">
+      {% if total_budgeted > 0 %}
+      Active spending cap: {{ user_currency_symbol }}{{ total_budgeted|floatformat:0 }}
+      {% else %}
+      No active budget set this month
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Daily Average Burn Rate -->
+  <div class="finora-card finora-card-interactive" style="border-left: 4px solid var(--soft-purple);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+      <div>
+        <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Daily Average Burn</span>
+        <div style="font-size: 1.15rem; font-weight: 800; color: var(--soft-purple); margin-top: 0.2rem;">
+          {{ user_currency_symbol }}{{ daily_avg_spend|floatformat:2|intcomma }} / day
+        </div>
+      </div>
+      <div class="kpi-icon-pill purple" style="width: 28px; height: 28px;"><i data-lucide="flame" style="width: 15px; height: 15px;"></i></div>
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-dim);">Current billing cycle burn rate</div>
+  </div>
+
+  <!-- Peak Spending Day -->
+  <div class="finora-card finora-card-interactive" style="border-left: 4px solid var(--emerald-green);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+      <div>
+        <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Spending Pattern Peak</span>
+        <div style="font-size: 1.15rem; font-weight: 800; color: var(--emerald-green); margin-top: 0.2rem;">
+          {{ peak_spending_day }}
+        </div>
+      </div>
+      <div class="kpi-icon-pill green" style="width: 28px; height: 28px;"><i data-lucide="calendar" style="width: 15px; height: 15px;"></i></div>
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-dim);">Highest outflow velocity weekday</div>
+  </div>
+</div>
+
+<!-- Charts Row 1: Monthly Trend & Weekly Spending -->
+<div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 1.5rem; margin-bottom: 1.75rem;">
+  <div class="finora-card">
+    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem;">Cash Flow Trajectory (Income vs Expense)</h3>
+    <div style="height: 300px; position: relative;">
+      <canvas id="monthlyTrendChart"></canvas>
+    </div>
+  </div>
+
+  <div class="finora-card">
+    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem;">Weekly Burn Velocity</h3>
+    <div style="height: 300px; position: relative;">
+      <canvas id="weeklyChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 2: Category Pie & Payment Distribution -->
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-bottom: 1.75rem;">
+  <div class="finora-card">
+    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem;">Category Allocation</h3>
+    <div style="height: 280px; position: relative;">
+      <canvas id="categoryPieChart"></canvas>
+    </div>
+  </div>
+
+  <div class="finora-card">
+    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem;">Payment Method Distribution</h3>
+    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+      {% for p in payment_stats %}
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 0.75rem;">
+        <div>
+          <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); text-transform: uppercase;">
+            {{ p.payment_method }}
+          </div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">{{ p.count }} transactions</div>
+        </div>
+        <div style="font-size: 1rem; font-weight: 800; color: var(--electric-blue);">
+          {{ user_currency_symbol }}{{ p.total|floatformat:2|intcomma }}
+        </div>
+      </div>
+      {% empty %}
+      <div style="padding: 2rem; text-align: center; color: var(--text-dim);">No transactions this year</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Top 5 Highest Expenses this Year -->
+<div class="finora-card">
+  <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Top 5 Capital Deployments ({{ current_year }})</h3>
+  <div class="finora-table-wrapper">
+    <table class="finora-table">
+      <thead>
+        <tr>
+          <th>Expense Item</th>
+          <th>Category</th>
+          <th>Date</th>
+          <th>Payment Method</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in top_expenses %}
+        <tr>
+          <td><b style="color: var(--text-main);">{{ tx.title }}</b></td>
+          <td>
+            {% if tx.category %}
+            <span class="category-badge">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ tx.category.color }};"></span>
+              {{ tx.category.name }}
+            </span>
+            {% else %}
+            <span class="category-badge">General</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.82rem;">{{ tx.date|date:"d M Y" }}</td>
+          <td><span style="font-size: 0.78rem; color: var(--text-dim); text-transform: uppercase;">{{ tx.get_payment_method_display }}</span></td>
+          <td style="text-align: right;"><b class="amount-expense">-{{ user_currency_symbol }}{{ tx.amount|floatformat:2|intcomma }}</b></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-dim);">No expenses recorded yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

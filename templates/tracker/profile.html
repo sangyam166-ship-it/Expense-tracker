@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings &amp; Profile &bull; FINORA{% endblock %}
+{% block header_title %}Account &amp; Workspace Settings{% endblock %}
+{% block header_subtitle %}Manage your currency preferences, biometric details, themes, and security{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 1.5rem;">
+  <!-- Profile & Currency Settings -->
+  <div class="finora-card">
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+      <i data-lucide="user" style="color: var(--electric-blue);"></i> User Profile &amp; Preferences
+    </h3>
+
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_profile">
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">First Name</label>
+          {{ profile_form.first_name }}
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Last Name</label>
+          {{ profile_form.last_name }}
+        </div>
+      </div>
+
+      <div class="form-group-finora">
+        <label class="form-label-finora">Email Address</label>
+        {{ profile_form.email }}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Preferred Operating Currency</label>
+          {{ profile_form.currency }}
+          <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;">Updates currency symbols across all reports &amp; charts.</div>
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Dashboard Theme</label>
+          {{ profile_form.theme }}
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Monthly Income Target ({{ user_currency_symbol }})</label>
+          {{ profile_form.monthly_income_target }}
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Monthly Savings Target ({{ user_currency_symbol }})</label>
+          {{ profile_form.monthly_savings_target }}
+        </div>
+      </div>
+
+      <div class="form-group-finora">
+        <label class="form-label-finora">Contact Phone</label>
+        {{ profile_form.phone }}
+      </div>
+
+      <div class="form-group-finora">
+        <label class="form-label-finora">Avatar Picture</label>
+        {{ profile_form.avatar }}
+      </div>
+
+      <div class="form-group-finora">
+        <label class="form-label-finora">Financial Bio / Notes</label>
+        {{ profile_form.bio }}
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+        <button type="submit" class="btn-finora btn-primary-finora">
+          <i data-lucide="save"></i> Save Profile Details
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Security & Password Change -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <div class="finora-card">
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="shield" style="color: var(--soft-purple);"></i> Security &amp; Password
+      </h3>
+
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="change_password">
+
+        {% for field in password_form %}
+        <div class="form-group-finora">
+          <label class="form-label-finora">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+          <div style="font-size: 0.75rem; color: var(--coral-red); margin-top: 0.25rem;">
+            {{ field.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+
+        <div style="margin-top: 1rem;">
+          <button type="submit" class="btn-finora btn-secondary-finora" style="width: 100%;">
+            <i data-lucide="key"></i> Update Password
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Quick Theme Switch Box -->
+    <div class="finora-card">
+      <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem;">Quick Theme Switcher</h4>
+      <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Toggle seamlessly between Deep Navy (dark) and Clean Light mode.</p>
+      <a href="{% url 'toggle_theme' %}" class="btn-finora btn-secondary-finora" style="width: 100%;">
+        <i data-lucide="sun-moon"></i> Toggle Theme Now
+      </a>
+    </div>
+
+    <!-- Data Backup & Disaster Recovery -->
+    <div class="finora-card" style="border-top: 3px solid var(--electric-blue);">
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="database" style="color: var(--electric-blue);"></i> Data Backup &amp; Recovery
+      </h3>
+      <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1.25rem; line-height: 1.45;">
+        Export your complete financial records (transactions, categories, budgets, savings goals, recurring rules) as a portable JSON snapshot.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <a href="{% url 'backup_data' %}" class="btn-finora btn-secondary-finora" style="width: 100%; justify-content: center;">
+          <i data-lucide="download"></i> Export Full Backup (JSON)
+        </a>
+
+        <div style="border-top: 1px dashed var(--border-subtle); padding-top: 1rem;">
+          <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main);">Restore Workspace from JSON</div>
+          <form method="POST" action="{% url 'restore_data' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group-finora" style="margin-bottom: 0.75rem;">
+              <input type="file" name="backup_file" accept=".json" class="form-control-finora" required>
+            </div>
+            <button type="submit" class="btn-finora btn-primary-finora" style="width: 100%; justify-content: center;" onclick="return confirm('Restore data from this JSON backup archive? Existing records will be safely preserved and merged.');">
+              <i data-lucide="upload-cloud"></i> Restore Backup Archive
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

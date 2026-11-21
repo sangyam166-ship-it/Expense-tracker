@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Categories &bull; FINORA{% endblock %}
+{% block header_title %}Category Management{% endblock %}
+{% block header_subtitle %}Organize transaction classification, icons, and color assignments{% endblock %}
+
+{% block content %}
+<!-- Controls Header -->
+<div class="finora-card" style="margin-bottom: 1.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h3 style="font-size: 1.1rem; font-weight: 700;">Expense &amp; Income Classification</h3>
+      <p style="font-size: 0.8rem; color: var(--text-dim);">Customize taxonomy labels and visual badges to match your personalized workflow.</p>
+    </div>
+    <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('addCategoryModal')">
+      <i data-lucide="plus"></i> Create Custom Category
+    </button>
+  </div>
+</div>
+
+<!-- Custom Categories Grid -->
+<div style="margin-bottom: 2rem;">
+  <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+    <i data-lucide="tags" style="color: var(--electric-blue);"></i> Custom Categories
+  </h3>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem;">
+    {% for cat in user_categories %}
+    <div class="finora-card finora-card-interactive" style="border-left: 4px solid {{ cat.color }};">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; color: {{ cat.color }};">
+            <i data-lucide="{{ cat.icon }}" style="width: 17px; height: 17px;"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">{{ cat.name }}</div>
+            <span class="category-badge" style="font-size: 0.68rem; padding: 0.2rem 0.5rem; text-transform: uppercase;">
+              {{ cat.get_type_display }}
+            </span>
+          </div>
+        </div>
+
+        {% if not cat.is_default %}
+        <form action="{% url 'category_delete' cat.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Delete custom category \'{{ cat.name|escapejs }}\'? Associated transactions will be marked uncategorized.');">
+          {% csrf_token %}
+          <button type="submit" class="btn-icon" style="width: 28px; height: 28px; color: var(--coral-red);" title="Delete Category">
+            <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-dim); margin-top: 0.5rem; border-top: 1px solid var(--border-subtle); padding-top: 0.65rem;">
+        <span>Usage Count</span>
+        <span style="font-weight: 700; color: var(--text-main);">{{ cat.tx_count }} records</span>
+      </div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1 / -1; padding: 2.5rem; text-align: center; background: var(--bg-card); border: 1px dashed var(--border-subtle); border-radius: 1rem;">
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem;">No custom user-defined categories yet.</p>
+      <button class="btn-finora btn-secondary-finora" onclick="openFinoraModal('addCategoryModal')">
+        <i data-lucide="plus"></i> Add Your First Custom Category
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- System Default Categories Section -->
+<div>
+  <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+    <i data-lucide="shield-check" style="color: var(--emerald-green);"></i> System Default Categories
+  </h3>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem;">
+    {% for cat in system_categories %}
+    <div class="finora-card" style="padding: 1.1rem; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 0.65rem;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; color: {{ cat.color }};">
+          <i data-lucide="{{ cat.icon }}" style="width: 16px; height: 16px;"></i>
+        </div>
+        <div>
+          <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-main);">{{ cat.name }}</div>
+          <div style="font-size: 0.7rem; color: var(--text-dim);">{{ cat.get_type_display }}</div>
+        </div>
+      </div>
+      <span class="category-badge" style="font-size: 0.72rem;">Default</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="finora-modal-backdrop" id="addCategoryModal">
+  <div class="finora-modal-box">
+    <div class="finora-modal-header">
+      <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="tag" style="color: var(--electric-blue);"></i> New Category
+      </h3>
+      <button class="btn-icon" onclick="closeFinoraModal('addCategoryModal')" style="width: 30px; height: 30px;">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+    <form action="{% url 'category_create' %}" method="POST">
+      {% csrf_token %}
+      <div class="finora-modal-body">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Category Name</label>
+          {{ form.name }}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group-finora">
+            <label class="form-label-finora">Type</label>
+            {{ form.type }}
+          </div>
+          <div class="form-group-finora">
+            <label class="form-label-finora">Icon Representation</label>
+            {{ form.icon }}
+          </div>
+        </div>
+
+        <div class="form-group-finora">
+          <label class="form-label-finora">Badge Accent Color</label>
+          {{ form.color }}
+        </div>
+      </div>
+      <div class="finora-modal-footer">
+        <button type="button" class="btn-finora btn-secondary-finora" onclick="closeFinoraModal('addCategoryModal')">Cancel</button>
+        <button type="submit" class="btn-finora btn-primary-finora">Create Category</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

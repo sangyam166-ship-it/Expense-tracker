@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Budgets &bull; FINORA{% endblock %}
+{% block header_title %}Budget Management{% endblock %}
+{% block header_subtitle %}Set limits, track threshold alerts, and maintain disciplined spending{% endblock %}
+
+{% block content %}
+<!-- Controls Header -->
+<div class="finora-card" style="margin-bottom: 1.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <!-- Month / Year Selector -->
+    <form method="GET" style="display: flex; gap: 0.75rem; align-items: center;">
+      <select name="month" class="form-control-finora form-select-finora" style="width: 140px;" onchange="this.form.submit()">
+        {% for m_num, m_name in month_names %}
+        <option value="{{ m_num }}" {% if selected_month == m_num %}selected{% endif %}>{{ m_name }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="year" class="form-control-finora form-select-finora" style="width: 100px;" onchange="this.form.submit()">
+        {% for yr in year_range %}
+        <option value="{{ yr }}" {% if selected_year == yr %}selected{% endif %}>{{ yr }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <div style="display: flex; gap: 0.75rem;">
+      <form action="{% url 'budget_reset' %}" method="POST" style="display: inline;" onsubmit="return confirm('Clone all budgets configured from previous month into this month?');">
+        {% csrf_token %}
+        <button type="submit" class="btn-finora btn-secondary-finora" title="Clone previous month's budget configuration">
+          <i data-lucide="copy"></i> Clone Last Month
+        </button>
+      </form>
+
+      <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('addBudgetModal')">
+        <i data-lucide="plus"></i> Set Budget
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Overall Monthly Budget Highlight -->
+{% if overall_budget %}
+<div class="finora-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--electric-blue);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+    <div>
+      <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Overall Spending Cap</span>
+      <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">{{ selected_month_name }} {{ selected_year }} Budget</h2>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-size: 1.5rem; font-weight: 800; color: {% if overall_budget.is_exceeded %}var(--coral-red){% elif overall_budget.is_warning %}var(--amber-warning){% else %}var(--emerald-green){% endif %};">
+        {{ overall_budget.get_percentage }}%
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-dim);">Limit: {{ user_currency_symbol }}{{ overall_budget.amount|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
+
+  <div class="progress-bar-container" style="height: 12px; margin-bottom: 0.75rem;">
+    <div class="progress-bar-fill {% if overall_budget.is_exceeded %}danger{% elif overall_budget.is_warning %}warning{% else %}normal{% endif %}" style="width: {{ overall_budget.get_percentage|floatformat:0 }}%;"></div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+    <span>Spent so far: <b style="color: var(--text-main);">{{ user_currency_symbol }}{{ overall_budget.get_spent_amount|floatformat:2|intcomma }}</b></span>
+    <span>Remaining buffer: <b style="color: {% if overall_budget.get_remaining < 0 %}var(--coral-red){% else %}var(--emerald-green){% endif %};">{{ user_currency_symbol }}{{ overall_budget.get_remaining|floatformat:2|intcomma }}</b></span>
+  </div>
+</div>
+{% endif %}
+
+<!-- Category-Wise Budgets Grid -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+  <h3 style="font-size: 1.05rem; font-weight: 700;">Category Allocations</h3>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+  {% for b in category_budgets %}
+  <div class="finora-card finora-card-interactive" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background-color: {{ b.category.color }};"></span>
+          <span style="font-size: 0.92rem; font-weight: 700; color: var(--text-main);">{{ b.category.name }}</span>
+        </div>
+        <form action="{% url 'budget_delete' b.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Remove budget for {{ b.category.name|escapejs }}?');">
+          {% csrf_token %}
+          <button type="submit" class="btn-icon" style="width: 26px; height: 26px; color: var(--coral-red);" title="Delete Budget">
+            <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+          </button>
+        </form>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem;">
+        <span style="font-size: 1.2rem; font-weight: 800; color: var(--text-main);">
+          {{ user_currency_symbol }}{{ b.get_spent_amount|floatformat:2|intcomma }}
+        </span>
+        <span style="font-size: 0.8rem; color: var(--text-dim);">
+          of {{ user_currency_symbol }}{{ b.amount|floatformat:2|intcomma }}
+        </span>
+      </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill {% if b.is_exceeded %}danger{% elif b.is_warning %}warning{% else %}normal{% endif %}" style="width: {{ b.get_percentage|floatformat:0 }}%;"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; font-size: 0.75rem;">
+      <span style="font-weight: 600; color: {% if b.is_exceeded %}var(--coral-red){% elif b.is_warning %}var(--amber-warning){% else %}var(--emerald-green){% endif %};">
+        {{ b.get_percentage }}% utilized
+      </span>
+      {% if b.is_exceeded %}
+      <span style="color: var(--coral-red); font-weight: 700;">LIMIT EXCEEDED</span>
+      {% elif b.is_warning %}
+      <span style="color: var(--amber-warning); font-weight: 700;">NEAR THRESHOLD</span>
+      {% else %}
+      <span style="color: var(--text-dim);">On Track</span>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; background: var(--bg-card); border: 1px dashed var(--border-subtle); border-radius: 1rem;">
+    <i data-lucide="pie-chart" style="width: 42px; height: 42px; margin-bottom: 0.75rem; color: var(--text-dim);"></i>
+    <div style="font-size: 1rem; font-weight: 600; color: var(--text-muted);">No category budgets set for {{ selected_month_name }} {{ selected_year }}</div>
+    <div style="font-size: 0.82rem; margin-top: 0.25rem; color: var(--text-dim);">Click below to allocate your budget limits.</div>
+    <div style="margin-top: 1rem;">
+      <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('addBudgetModal')">
+        <i data-lucide="plus"></i> Add New Budget
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- 6-Month Budget Adherence History -->
+<div style="margin-top: 2.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div>
+      <h3 style="font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="history" style="color: var(--electric-blue);"></i> 6-Month Budget Adherence History
+      </h3>
+      <p style="font-size: 0.8rem; color: var(--text-dim); margin: 0.2rem 0 0 0;">Historical monthly spending disciplined tracking against established spending caps.</p>
+    </div>
+  </div>
+
+  <div class="finora-card" style="padding: 0; overflow: hidden;">
+    <div class="finora-table-wrapper">
+      <table class="finora-table">
+        <thead>
+          <tr>
+            <th>Month Period</th>
+            <th>Monthly Budget Cap</th>
+            <th>Actual Expenses</th>
+            <th>Utilization</th>
+            <th style="text-align: right;">Status &amp; Variance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in budget_history %}
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: var(--text-main);">{{ h.month_name }}</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">{{ h.year }} Period</div>
+            </td>
+            <td>
+              {% if h.budget_cap > 0 %}
+              <span style="font-weight: 600;">{{ user_currency_symbol }}{{ h.budget_cap|floatformat:2|intcomma }}</span>
+              {% else %}
+              <span style="color: var(--text-dim); font-size: 0.8rem;">No Cap Configured</span>
+              {% endif %}
+            </td>
+            <td>
+              <span style="font-weight: 700; color: var(--text-main);">{{ user_currency_symbol }}{{ h.total_spent|floatformat:2|intcomma }}</span>
+            </td>
+            <td style="min-width: 160px;">
+              {% if h.budget_cap > 0 %}
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.3rem;">
+                <span style="font-weight: 600; color: {% if h.is_exceeded %}var(--coral-red){% elif h.pct >= 80 %}var(--amber-warning){% else %}var(--emerald-green){% endif %};">
+                  {{ h.pct }}%
+                </span>
+                <span style="color: var(--text-dim);">used</span>
+              </div>
+              <div class="progress-bar-container" style="height: 6px;">
+                <div class="progress-bar-fill {% if h.is_exceeded %}danger{% elif h.pct >= 80 %}warning{% else %}normal{% endif %}" style="width: {{ h.pct|floatformat:0 }}%;"></div>
+              </div>
+              {% else %}
+              <span style="font-size: 0.75rem; color: var(--text-dim);">&mdash;</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right;">
+              {% if h.budget_cap > 0 %}
+                {% if h.is_exceeded %}
+                <span class="badge-finora badge-danger" style="display: inline-block;">
+                  Over by {{ user_currency_symbol }}{{ h.overspent|floatformat:2|intcomma }}
+                </span>
+                {% else %}
+                <span class="badge-finora badge-success" style="display: inline-block;">
+                  Saved {{ user_currency_symbol }}{{ h.savings|floatformat:2|intcomma }}
+                </span>
+                {% endif %}
+              {% else %}
+              <span class="badge-finora badge-neutral" style="display: inline-block;">Unbudgeted</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Budget Modal -->
+<div class="finora-modal-backdrop" id="addBudgetModal">
+  <div class="finora-modal-box">
+    <div class="finora-modal-header">
+      <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="pie-chart" style="color: var(--electric-blue);"></i> Set Spending Limit
+      </h3>
+      <button class="btn-icon" onclick="closeFinoraModal('addBudgetModal')" style="width: 30px; height: 30px;">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+    <form action="{% url 'budget_create' %}" method="POST">
+      {% csrf_token %}
+      <div class="finora-modal-body">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Scope / Category</label>
+          {{ budget_form.category }}
+          <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.25rem;">Select an expense category, or leave as Overall Monthly Budget.</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group-finora">
+            <label class="form-label-finora">Month</label>
+            {{ budget_form.month }}
+          </div>
+          <div class="form-group-finora">
+            <label class="form-label-finora">Year</label>
+            {{ budget_form.year }}
+          </div>
+        </div>
+
+        <div class="form-group-finora">
+          <label class="form-label-finora">Limit Amount ({{ user_currency_symbol }})</label>
+          {{ budget_form.amount }}
+        </div>
+      </div>
+      <div class="finora-modal-footer">
+        <button type="button" class="btn-finora btn-secondary-finora" onclick="closeFinoraModal('addBudgetModal')">Cancel</button>
+        <button type="submit" class="btn-finora btn-primary-finora">Save Budget</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

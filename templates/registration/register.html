@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account &bull; FINORA</title>
+  <link rel="stylesheet" href="{% static 'css/finora.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      z-index: 10;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 1.5rem;
+      padding: 2.5rem;
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(20px);
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Canvas Background -->
+  <div id="finora-3d-bg"></div>
+
+  <div class="auth-container">
+    <div class="auth-card" id="auth-box">
+      <!-- Logo Branding -->
+      <div style="text-align: center; margin-bottom: 1.75rem;">
+        <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, var(--electric-blue), var(--soft-purple)); display: inline-flex; align-items: center; justify-content: center; color: #FFF; font-weight: 800; font-size: 1.5rem; margin-bottom: 0.75rem; box-shadow: 0 4px 18px var(--electric-blue-glow);">
+          F
+        </div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text-main);">Join FINORA</h2>
+        <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.25rem;">Start tracking expenses, budgets, and savings goals</p>
+      </div>
+
+      <!-- Messages / Errors -->
+      {% if form.errors %}
+      <div class="finora-alert finora-alert-danger" style="padding: 0.75rem 1rem; font-size: 0.82rem; margin-bottom: 1.25rem;">
+        <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i>
+        <div>
+          {% for field in form %}
+            {% for error in field.errors %}
+              <div>{{ field.label }}: {{ error }}</div>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <div class="form-group-finora">
+            <label class="form-label-finora">First Name</label>
+            {{ form.first_name }}
+          </div>
+          <div class="form-group-finora">
+            <label class="form-label-finora">Last Name</label>
+            {{ form.last_name }}
+          </div>
+        </div>
+
+        <div class="form-group-finora">
+          <label class="form-label-finora">Username</label>
+          {{ form.username }}
+        </div>
+
+        <div class="form-group-finora">
+          <label class="form-label-finora">Email Address</label>
+          {{ form.email }}
+        </div>
+
+        <div class="form-group-finora">
+          <label class="form-label-finora">Default Currency</label>
+          {{ form.currency }}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <div class="form-group-finora">
+            <label class="form-label-finora">Password</label>
+            {{ form.password1 }}
+          </div>
+          <div class="form-group-finora">
+            <label class="form-label-finora">Confirm Password</label>
+            {{ form.password2 }}
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <button type="submit" class="btn-finora btn-primary-finora" style="width: 100%; padding: 0.85rem; font-size: 0.95rem;">
+            Create Account &rarr;
+          </button>
+        </div>
+      </form>
+
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+        Already registered? <a href="{% url 'login' %}" style="color: var(--electric-blue); font-weight: 600; text-decoration: none;">Sign in here</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/finora-3d.js' %}"></script>
+  <script>
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof gsap !== 'undefined') {
+      gsap.from('#auth-box', {
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power3.out'
+      });
+    }
+  </script>
+</body>
+</html>

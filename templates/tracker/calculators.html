@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Financial Calculators &bull; FINORA{% endblock %}
+{% block header_title %}Financial Calculators &amp; Projections{% endblock %}
+{% block header_subtitle %}Interactive planning tools for loans, compound wealth growth, and shared expenses{% endblock %}
+
+{% block content %}
+<!-- Runway Metric Strip -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-bottom: 2rem;">
+  <div class="finora-card kpi-card balance finora-card-interactive">
+    <div class="kpi-header">
+      <span class="kpi-title">Emergency Runway</span>
+      <div class="kpi-icon-pill green"><i data-lucide="shield"></i></div>
+    </div>
+    <div class="kpi-value" style="color: var(--emerald-green);">
+      {{ runway_months }} <span style="font-size: 1rem; color: var(--text-dim); font-weight: 600;">Months</span>
+    </div>
+    <div class="kpi-footer">Based on 6-month average burn of {{ user_currency_symbol }}{{ avg_monthly_expense|floatformat:2|intcomma }}/mo</div>
+  </div>
+
+  <div class="finora-card kpi-card income finora-card-interactive">
+    <div class="kpi-header">
+      <span class="kpi-title">Current Liquid Capital</span>
+      <div class="kpi-icon-pill blue"><i data-lucide="wallet"></i></div>
+    </div>
+    <div class="kpi-value">
+      {{ user_currency_symbol }}{{ total_balance|floatformat:2|intcomma }}
+    </div>
+    <div class="kpi-footer">Available buffer to deploy or invest</div>
+  </div>
+</div>
+
+<!-- Calculators Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.75rem;">
+  <!-- 1. Loan EMI Calculator -->
+  <div class="finora-card">
+    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem;">
+      <div class="kpi-icon-pill blue" style="width: 32px; height: 32px;"><i data-lucide="landmark" style="width: 16px; height: 16px;"></i></div>
+      <div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Loan &amp; EMI Calculator</h3>
+        <p style="font-size: 0.75rem; color: var(--text-dim);">Personal, Home, or Car Loan amortization</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="form-group-finora">
+        <label class="form-label-finora">Loan Principal Amount ({{ user_currency_symbol }})</label>
+        <input type="number" id="loanAmount" class="form-control-finora" value="500000" step="5000" oninput="calculateEMI()">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Interest Rate (% p.a.)</label>
+          <input type="number" id="loanRate" class="form-control-finora" value="9.5" step="0.1" oninput="calculateEMI()">
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Tenure (Years)</label>
+          <input type="number" id="loanTenure" class="form-control-finora" value="5" min="1" max="30" oninput="calculateEMI()">
+        </div>
+      </div>
+
+      <div style="padding: 1.15rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 1rem; margin-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <span style="font-size: 0.85rem; color: var(--text-dim);">Monthly EMI:</span>
+          <span style="font-size: 1.35rem; font-weight: 800; color: var(--electric-blue);" id="resultEmi">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">
+          <span>Total Interest:</span>
+          <b id="resultInterest" style="color: var(--text-main);">-</b>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+          <span>Total Amount Payable:</span>
+          <b id="resultTotal" style="color: var(--text-main);">-</b>
+        </div>
+
+        <div class="progress-bar-container" style="height: 8px; margin-top: 1rem; display: flex;">
+          <div id="barPrincipal" style="background: var(--electric-blue); height: 100%; border-radius: 4px 0 0 4px;" title="Principal Share"></div>
+          <div id="barInterest" style="background: var(--coral-red); height: 100%; border-radius: 0 4px 4px 0;" title="Interest Share"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); margin-top: 0.35rem;">
+          <span style="display: flex; align-items: center; gap: 0.3rem;"><span style="width: 8px; height: 8px; border-radius: 2px; background: var(--electric-blue);"></span> Principal</span>
+          <span style="display: flex; align-items: center; gap: 0.3rem;"><span style="width: 8px; height: 8px; border-radius: 2px; background: var(--coral-red);"></span> Interest</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Wealth Growth & SIP Calculator -->
+  <div class="finora-card">
+    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem;">
+      <div class="kpi-icon-pill green" style="width: 32px; height: 32px;"><i data-lucide="trending-up" style="width: 16px; height: 16px;"></i></div>
+      <div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Compound Wealth Projector</h3>
+        <p style="font-size: 0.75rem; color: var(--text-dim);">Systematic Investment Plan (SIP) growth modeling</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="form-group-finora">
+        <label class="form-label-finora">Monthly Investment Deposit ({{ user_currency_symbol }})</label>
+        <input type="number" id="sipAmount" class="form-control-finora" value="5000" step="500" oninput="calculateSIP()">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Expected Return (% p.a.)</label>
+          <input type="number" id="sipRate" class="form-control-finora" value="12" step="0.5" oninput="calculateSIP()">
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Duration (Years)</label>
+          <input type="number" id="sipYears" class="form-control-finora" value="10" min="1" max="40" oninput="calculateSIP()">
+        </div>
+      </div>
+
+      <div style="padding: 1.15rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 1rem; margin-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <span style="font-size: 0.85rem; color: var(--text-dim);">Projected Corpus:</span>
+          <span style="font-size: 1.35rem; font-weight: 800; color: var(--emerald-green);" id="resultMaturity">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">
+          <span>Invested Capital:</span>
+          <b id="resultInvested" style="color: var(--text-main);">-</b>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+          <span>Estimated Returns:</span>
+          <b id="resultReturns" style="color: var(--emerald-green);">-</b>
+        </div>
+
+        <div class="progress-bar-container" style="height: 8px; margin-top: 1rem; display: flex;">
+          <div id="barInvested" style="background: var(--soft-purple); height: 100%; border-radius: 4px 0 0 4px;" title="Invested Share"></div>
+          <div id="barReturns" style="background: var(--emerald-green); height: 100%; border-radius: 0 4px 4px 0;" title="Wealth Gains"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); margin-top: 0.35rem;">
+          <span style="display: flex; align-items: center; gap: 0.3rem;"><span style="width: 8px; height: 8px; border-radius: 2px; background: var(--soft-purple);"></span> Capital</span>
+          <span style="display: flex; align-items: center; gap: 0.3rem;"><span style="width: 8px; height: 8px; border-radius: 2px; background: var(--emerald-green);"></span> Growth</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Bill Splitter with Tip -->
+  <div class="finora-card">
+    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem;">
+      <div class="kpi-icon-pill purple" style="width: 32px; height: 32px;"><i data-lucide="users" style="width: 16px; height: 16px;"></i></div>
+      <div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Bill Splitter &amp; Tip Calculator</h3>
+        <p style="font-size: 0.75rem; color: var(--text-dim);">Effortlessly split dining, travel, or group outings</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="form-group-finora">
+        <label class="form-label-finora">Total Bill Amount ({{ user_currency_symbol }})</label>
+        <input type="number" id="splitBill" class="form-control-finora" value="2400" step="50" oninput="calculateSplit()">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Number of People</label>
+          <input type="number" id="splitPeople" class="form-control-finora" value="4" min="1" max="50" oninput="calculateSplit()">
+        </div>
+        <div class="form-group-finora">
+          <label class="form-label-finora">Tip (%)</label>
+          <select id="splitTip" class="form-control-finora form-select-finora" onchange="calculateSplit()">
+            <option value="0">0% (No Tip)</option>
+            <option value="5">5%</option>
+            <option value="10" selected>10% Standard</option>
+            <option value="15">15% Generous</option>
+            <option value="20">20% Premium</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="padding: 1.15rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 1rem; margin-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <span style="font-size: 0.85rem; color: var(--text-dim);">Each Person Pays:</span>
+          <span style="font-size: 1.35rem; font-weight: 800; color: var(--soft-purple);" id="resultPerPerson">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">
+          <span>Tip Total:</span>
+          <b id="resultTipAmount" style="color: var(--text-main);">-</b>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+          <span>Grand Total:</span>
+          <b id="resultGrandTotal" style="color: var(--text-main);">-</b>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const sym = window.FINORA_CURRENCY_SYMBOL || '₹';
+
+  function calculateEMI() {
+    const P = parseFloat(document.getElementById('loanAmount').value) || 0;
+    const annualR = parseFloat(document.getElementById('loanRate').value) || 0;
+    const years = parseFloat(document.getElementById('loanTenure').value) || 0;
+    const N = years * 12;
+
+    if (P <= 0 || N <= 0 || annualR <= 0) {
+      document.getElementById('resultEmi').innerText = sym + '0.00';
+      return;
+    }
+
+    const r = (annualR / 12) / 100;
+    const emi = (P * r * Math.pow(1 + r, N)) / (Math.pow(1 + r, N) - 1);
+    const totalPayable = emi * N;
+    const totalInterest = totalPayable - P;
+
+    document.getElementById('resultEmi').innerText = sym + emi.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    document.getElementById('resultInterest').innerText = sym + totalInterest.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    document.getElementById('resultTotal').innerText = sym + totalPayable.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+    const pRatio = Math.round((P / totalPayable) * 100);
+    const iRatio = 100 - pRatio;
+    document.getElementById('barPrincipal').style.width = pRatio + '%';
+    document.getElementById('barInterest').style.width = iRatio + '%';
+  }
+
+  function calculateSIP() {
+    const P = parseFloat(document.getElementById('sipAmount').value) || 0;
+    const annualR = parseFloat(document.getElementById('sipRate').value) || 0;
+    const years = parseFloat(document.getElementById('sipYears').value) || 0;
+    const n = years * 12;
+
+    if (P <= 0 || n <= 0 || annualR <= 0) {
+      document.getElementById('resultMaturity').innerText = sym + '0.00';
+      return;
+    }
+
+    const i = (annualR / 12) / 100;
+    // FV = P * [((1 + i)^n - 1) / i] * (1 + i)
+    const maturity = P * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
+    const invested = P * n;
+    const returns = maturity - invested;
+
+    document.getElementById('resultMaturity').innerText = sym + Math.round(maturity).toLocaleString('en-IN');
+    document.getElementById('resultInvested').innerText = sym + Math.round(invested).toLocaleString('en-IN');
+    document.getElementById('resultReturns').innerText = '+' + sym + Math.round(returns).toLocaleString('en-IN');
+
+    const invRatio = Math.round((invested / maturity) * 100);
+    const retRatio = 100 - invRatio;
+    document.getElementById('barInvested').style.width = invRatio + '%';
+    document.getElementById('barReturns').style.width = retRatio + '%';
+  }
+
+  function calculateSplit() {
+    const bill = parseFloat(document.getElementById('splitBill').value) || 0;
+    const people = parseInt(document.getElementById('splitPeople').value) || 1;
+    const tipPct = parseFloat(document.getElementById('splitTip').value) || 0;
+
+    const tipAmount = bill * (tipPct / 100);
+    const grandTotal = bill + tipAmount;
+    const perPerson = people > 0 ? (grandTotal / people) : grandTotal;
+
+    document.getElementById('resultPerPerson').innerText = sym + perPerson.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('resultTipAmount').innerText = sym + tipAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('resultGrandTotal').innerText = sym + grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    calculateEMI();
+    calculateSIP();
+    calculateSplit();
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,332 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ user_theme|default:'dark' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}FINORA &bull; Smart Personal Expense Tracker{% endblock %}</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <!-- Finora Custom Fintech Design System -->
+  <link rel="stylesheet" href="{% static 'css/finora.css' %}">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js for Financial Data Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Three.js for 3D Ambient Canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- GSAP for Micro-Interactions & Animated Counters -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body>
+  <!-- 3D Background Canvas -->
+  <div id="finora-3d-bg"></div>
+
+  <div class="finora-app-layout">
+    <!-- Responsive Fintech Sidebar -->
+    <aside class="finora-sidebar" id="finora-sidebar">
+      <div class="finora-brand-wrapper">
+        <a href="{% url 'dashboard' %}" class="finora-logo-badge">
+          <div class="finora-logo-icon">F</div>
+          <div>
+            <div class="finora-logo-text">FINORA</div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); letter-spacing: 1px; font-weight: 600;">FINANCIAL OS</div>
+          </div>
+        </a>
+        <button class="btn-icon mobile-menu-btn" id="sidebar-close" style="display: none;">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <ul class="finora-nav-menu">
+        <div class="nav-section-title">Core Operating</div>
+        
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <a href="{% url 'dashboard' %}">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'transactions' %}active{% endif %}">
+          <a href="{% url 'transactions' %}">
+            <i data-lucide="arrow-left-right"></i>
+            <span>Transactions</span>
+          </a>
+        </li>
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}">
+          <a href="{% url 'expenses' %}">
+            <i data-lucide="trending-down"></i>
+            <span>Expenses</span>
+          </a>
+        </li>
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'income' %}active{% endif %}">
+          <a href="{% url 'income' %}">
+            <i data-lucide="trending-up"></i>
+            <span>Income</span>
+          </a>
+        </li>
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'categories' %}active{% endif %}">
+          <a href="{% url 'categories' %}">
+            <i data-lucide="tags"></i>
+            <span>Categories</span>
+          </a>
+        </li>
+
+        <div class="nav-section-title">Planning & Wealth</div>
+
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'budgets' %}active{% endif %}">
+          <a href="{% url 'budgets' %}">
+            <i data-lucide="pie-chart"></i>
+            <span>Budgets</span>
+          </a>
+        </li>
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'goals' %}active{% endif %}">
+          <a href="{% url 'goals' %}">
+            <i data-lucide="target"></i>
+            <span>Savings Goals</span>
+          </a>
+        </li>
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'recurring' %}active{% endif %}">
+          <a href="{% url 'recurring' %}">
+            <i data-lucide="calendar-sync"></i>
+            <span>Recurring</span>
+          </a>
+        </li>
+
+        <div class="nav-section-title">Intelligence</div>
+
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+          <a href="{% url 'analytics' %}">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Analytics</span>
+          </a>
+        </li>
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+          <a href="{% url 'reports' %}">
+            <i data-lucide="file-spreadsheet"></i>
+            <span>Reports & PDF</span>
+          </a>
+        </li>
+
+        <div class="nav-section-title">Preferences</div>
+
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+          <a href="{% url 'profile' %}">
+            <i data-lucide="settings"></i>
+            <span>Settings</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- User Profile at bottom of sidebar -->
+      {% if user.is_authenticated %}
+      <div class="sidebar-user-card">
+        <div class="sidebar-avatar">
+          {% if user.profile.avatar %}
+            <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}">
+          {% else %}
+            {{ user.username|make_list|first|upper }}
+          {% endif %}
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {{ user.get_full_name|default:user.username }}
+          </div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">{{ user_profile.get_currency_display|default:'USD ($)' }}</div>
+        </div>
+        <a href="{% url 'profile' %}" class="btn-icon" title="Settings" style="width: 32px; height: 32px;">
+          <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
+        </a>
+      </div>
+      {% endif %}
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="finora-main-content">
+      <!-- Top Navigation Bar -->
+      <header class="finora-topbar">
+        <div class="topbar-left">
+          <button class="btn-icon mobile-menu-btn" id="sidebar-toggle">
+            <i data-lucide="menu"></i>
+          </button>
+          <div>
+            <h1 class="page-title">{% block header_title %}Overview{% endblock %}</h1>
+            <p class="page-subtitle">{% block header_subtitle %}Real-time financial telemetry & balances{% endblock %}</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Quick Add Transaction Action -->
+          {% if user.is_authenticated %}
+          <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('globalTxModal')">
+            <i data-lucide="plus"></i>
+            <span class="d-none-sm">Add Transaction</span>
+          </button>
+          {% endif %}
+
+          <!-- Theme Toggle Button -->
+          <button class="btn-icon" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
+            <i data-lucide="sun-medium"></i>
+          </button>
+
+          <!-- Notifications Dropdown -->
+          {% if user.is_authenticated %}
+          <div style="position: relative;">
+            <button class="btn-icon" id="notification-bell-btn" title="Notifications">
+              <i data-lucide="bell"></i>
+              {% if unread_notifications_count > 0 %}
+              <span style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: var(--coral-red); color: #FFF; font-size: 0.65rem; font-weight: 800; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                {{ unread_notifications_count }}
+              </span>
+              {% endif %}
+            </button>
+
+            <div class="dropdown-menu-finora" id="notification-dropdown">
+              <div style="padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.82rem; font-weight: 700;">Alerts &amp; Updates</span>
+                <a href="{% url 'notifications' %}" style="font-size: 0.75rem; color: var(--electric-blue); text-decoration: none;">View All</a>
+              </div>
+              <div style="max-height: 280px; overflow-y: auto; padding: 0.5rem 0;">
+                {% for n in recent_notifications %}
+                <div style="padding: 0.65rem 0.85rem; border-bottom: 1px solid var(--border-subtle); font-size: 0.8rem;">
+                  <div style="font-weight: 600; color: {% if n.type == 'DANGER' %}var(--coral-red){% elif n.type == 'WARNING' %}var(--amber-warning){% elif n.type == 'SUCCESS' %}var(--emerald-green){% else %}var(--electric-blue){% endif %};">
+                    {{ n.title }}
+                  </div>
+                  <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 2px;">{{ n.message }}</div>
+                  <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 4px;">{{ n.created_at|timesince }} ago</div>
+                </div>
+                {% empty %}
+                <div style="padding: 1.5rem; text-align: center; color: var(--text-dim); font-size: 0.8rem;">
+                  No new notifications. All clear!
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- System Messages / Flash Alerts -->
+      <div class="finora-page-body">
+        {% if messages %}
+        <div style="margin-bottom: 1.5rem;">
+          {% for message in messages %}
+          <div class="finora-alert finora-alert-{{ message.tags }}">
+            <i data-lucide="{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}alert-triangle{% else %}info{% endif %}"></i>
+            <span>{{ message }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Quick Transaction Modal -->
+  {% if user.is_authenticated %}
+  <div class="finora-modal-backdrop" id="globalTxModal">
+    <div class="finora-modal-box">
+      <div class="finora-modal-header">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="plus-circle" style="color: var(--electric-blue);"></i> Log New Transaction
+        </h3>
+        <button class="btn-icon" onclick="closeFinoraModal('globalTxModal')" style="width: 30px; height: 30px;">
+          <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+        </button>
+      </div>
+      <form action="{% url 'transaction_create' %}" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="finora-modal-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group-finora">
+              <label class="form-label-finora">Type</label>
+              <select name="type" class="form-control-finora form-select-finora" required>
+                <option value="EXPENSE">Expense</option>
+                <option value="INCOME">Income</option>
+              </select>
+            </div>
+            <div class="form-group-finora">
+              <label class="form-label-finora">Amount ({{ user_currency_symbol }})</label>
+              <input type="number" step="0.01" min="0.01" name="amount" class="form-control-finora" placeholder="0.00" required>
+            </div>
+          </div>
+
+          <div class="form-group-finora">
+            <label class="form-label-finora">Title / Description</label>
+            <input type="text" name="title" class="form-control-finora" placeholder="e.g. Grocery Store, Client Payment" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group-finora">
+              <label class="form-label-finora">Category</label>
+              <select name="category" class="form-control-finora form-select-finora">
+                <option value="">-- Select Category --</option>
+                {% for cat in global_categories %}
+                <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.get_type_display }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group-finora">
+              <label class="form-label-finora">Payment Method</label>
+              <select name="payment_method" class="form-control-finora form-select-finora">
+                <option value="UPI">UPI / Instant Pay</option>
+                <option value="CREDIT_CARD">Credit Card</option>
+                <option value="DEBIT_CARD">Debit Card</option>
+                <option value="NET_BANKING">Net Banking</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CASH">Cash</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group-finora">
+              <label class="form-label-finora">Date</label>
+              <input type="date" name="date" class="form-control-finora" value="{% now 'Y-m-d' %}" required>
+            </div>
+            <div class="form-group-finora">
+              <label class="form-label-finora">Time</label>
+              <input type="time" name="time" class="form-control-finora" value="{% now 'H:i' %}">
+            </div>
+          </div>
+
+          <div class="form-group-finora">
+            <label class="form-label-finora">Notes (Optional)</label>
+            <textarea name="notes" rows="2" class="form-control-finora" placeholder="Additional details, tags or remarks"></textarea>
+          </div>
+        </div>
+        <div class="finora-modal-footer">
+          <button type="button" class="btn-finora btn-secondary-finora" onclick="closeFinoraModal('globalTxModal')">Cancel</button>
+          <button type="submit" class="btn-finora btn-primary-finora">Record Entry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Global Application Config -->
+  <script>
+    window.FINORA_CURRENCY_SYMBOL = "{{ user_currency_symbol|default:'₹' }}";
+  </script>
+
+  <!-- Core Scripts -->
+  <script src="{% static 'js/finora.js' %}"></script>
+  <script src="{% static 'js/finora-charts.js' %}"></script>
+  <script src="{% static 'js/finora-3d.js' %}"></script>
+  <script src="{% static 'js/finora-animations.js' %}"></script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Recurring Subscriptions &bull; FINORA{% endblock %}
+{% block header_title %}Recurring &amp; Subscriptions{% endblock %}
+{% block header_subtitle %}Automate recurring expenses, memberships, and periodic bills{% endblock %}
+
+{% block content %}
+<!-- Committed Spend Header -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+  <div class="finora-card kpi-card">
+    <div class="kpi-header">
+      <span class="kpi-title">Committed Monthly Overhead</span>
+      <div class="kpi-icon-pill red"><i data-lucide="repeat"></i></div>
+    </div>
+    <div class="kpi-value" style="color: var(--coral-red);">
+      {{ user_currency_symbol }}{{ total_monthly_committed|floatformat:2|intcomma }}
+    </div>
+    <div class="kpi-footer">Calculated normalized 30-day baseline obligation</div>
+  </div>
+
+  <div class="finora-card kpi-card">
+    <div class="kpi-header">
+      <span class="kpi-title">Active Recurring Items</span>
+      <div class="kpi-icon-pill blue"><i data-lucide="calendar"></i></div>
+    </div>
+    <div class="kpi-value">
+      {{ recurring_list.count }}
+    </div>
+    <div class="kpi-footer">Subscriptions, utilities, &amp; scheduled transfers</div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+  <h3 style="font-size: 1.05rem; font-weight: 700;">Recurring Schedules</h3>
+  <div style="display: flex; gap: 0.75rem;">
+    <!-- Process Due Button -->
+    <form action="{% url 'recurring_process' %}" method="POST" style="display: inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn-finora btn-secondary-finora">
+        <i data-lucide="refresh-cw"></i> Process Due Items
+      </button>
+    </form>
+
+    <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('createRecurringModal')">
+      <i data-lucide="plus"></i> Add Subscription
+    </button>
+  </div>
+</div>
+
+<!-- Recurring Items Table -->
+<div class="finora-card">
+  <div class="finora-table-wrapper">
+    <table class="finora-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Frequency</th>
+          <th>Next Due Date</th>
+          <th>Payment Method</th>
+          <th style="text-align: right;">Amount</th>
+          <th style="text-align: center;">Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recurring_list %}
+        <tr>
+          <td>
+            <div style="font-weight: 600; color: var(--text-main);">{{ item.title }}</div>
+            {% if item.notes %}<div style="font-size: 0.75rem; color: var(--text-dim);">{{ item.notes|truncatechars:35 }}</div>{% endif %}
+          </td>
+          <td>
+            {% if item.category %}
+            <span class="category-badge">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ item.category.color }};"></span>
+              {{ item.category.name }}
+            </span>
+            {% else %}
+            <span class="category-badge">General</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="category-badge" style="text-transform: uppercase; font-size: 0.72rem;">{{ item.get_frequency_display }}</span>
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">
+            {{ item.next_due_date|date:"d M Y" }}
+          </td>
+          <td>
+            <span style="font-size: 0.78rem; color: var(--text-dim); text-transform: uppercase;">{{ item.get_payment_method_display }}</span>
+          </td>
+          <td style="text-align: right;">
+            <span class="{% if item.type == 'INCOME' %}amount-income{% else %}amount-expense{% endif %}" style="font-size: 0.95rem;">
+              {% if item.type == 'INCOME' %}+{% else %}-{% endif %}{{ user_currency_symbol }}{{ item.amount|floatformat:2|intcomma }}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <form action="{% url 'recurring_toggle' item.pk %}" method="POST" style="display: inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn-finora {% if item.is_active %}btn-success-finora{% else %}btn-secondary-finora{% endif %}" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-radius: 1rem;">
+                {% if item.is_active %}ACTIVE{% else %}PAUSED{% endif %}
+              </button>
+            </form>
+          </td>
+          <td style="text-align: right;">
+            <form action="{% url 'recurring_delete' item.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Remove recurring schedule for {{ item.title|escapejs }}?');">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon" style="color: var(--coral-red); width: 28px; height: 28px;" title="Delete">
+                <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-dim);">
+            <i data-lucide="repeat" style="width: 40px; height: 40px; margin-bottom: 0.75rem; color: var(--text-dim);"></i>
+            <div style="font-size: 1rem; font-weight: 600; color: var(--text-muted);">No recurring subscriptions logged</div>
+            <div style="font-size: 0.82rem; margin-top: 0.25rem;">Keep track of Netflix, Spotify, gym memberships, rent, and cloud bills.</div>
+            <div style="margin-top: 1rem;">
+              <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('createRecurringModal')">
+                <i data-lucide="plus"></i> Add Subscription
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create Recurring Modal -->
+<div class="finora-modal-backdrop" id="createRecurringModal">
+  <div class="finora-modal-box">
+    <div class="finora-modal-header">
+      <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="calendar-sync" style="color: var(--electric-blue);"></i> Schedule Recurring Item
+      </h3>
+      <button class="btn-icon" onclick="closeFinoraModal('createRecurringModal')" style="width: 30px; height: 30px;">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+    <form action="{% url 'recurring_create' %}" method="POST">
+      {% csrf_token %}
+      <div class="finora-modal-body">
+        <div class="form-group-finora">
+          <label class="form-label-finora">Title / Service Name</label>
+          {{ form.title }}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group-finora">
+            <label class="form-label-finora">Type</label>
+            {{ form.type }}
+          </div>
+          <div class="form-group-finora">
+            <label class="form-label-finora">Amount ({{ user_currency_symbol }})</label>
+            {{ form.amount }}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group-finora">
+            <label class="form-label-finora">Category</label>
+            {{ form.category }}
+          </div>
+          <div class="form-group-finora">
+            <label class="form-label-finora">Frequency</label>
+            {{ form.frequency }}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group-finora">
+            <label class="form-label-finora">Payment Method</label>
+            {{ form.payment_method }}
+          </div>
+          <div class="form-group-finora">
+            <label class="form-label-finora">Next Due Date</label>
+            {{ form.next_due_date }}
+          </div>
+        </div>
+
+        <div class="form-group-finora">
+          <label class="form-label-finora">Notes / Contract details</label>
+          {{ form.notes }}
+        </div>
+      </div>
+      <div class="finora-modal-footer">
+        <button type="button" class="btn-finora btn-secondary-finora" onclick="closeFinoraModal('createRecurringModal')">Cancel</button>
+        <button type="submit" class="btn-finora btn-primary-finora">Schedule</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

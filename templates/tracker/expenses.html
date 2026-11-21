@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Expenses &bull; FINORA{% endblock %}
+{% block header_title %}Expense Management{% endblock %}
+{% block header_subtitle %}Track spending breakdown, categories, and cost centers for {{ current_month_name }}{% endblock %}
+
+{% block content %}
+<!-- Top Metrics Row -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+  <div class="finora-card kpi-card expense">
+    <div class="kpi-header">
+      <span class="kpi-title">Monthly Total Spend</span>
+      <div class="kpi-icon-pill red"><i data-lucide="trending-down"></i></div>
+    </div>
+    <div class="kpi-value" style="color: var(--coral-red);">
+      {{ user_currency_symbol }}{{ month_expense|floatformat:2|intcomma }}
+    </div>
+    <div class="kpi-footer">
+      <span>Aggregated spend for {{ current_month_name }}</span>
+    </div>
+  </div>
+
+  <div class="finora-card kpi-card">
+    <div class="kpi-header">
+      <span class="kpi-title">Highest Single Expense</span>
+      <div class="kpi-icon-pill red"><i data-lucide="zap"></i></div>
+    </div>
+    {% if highest_expense %}
+    <div class="kpi-value" style="font-size: 1.5rem; color: var(--text-main);">
+      {{ user_currency_symbol }}{{ highest_expense.amount|floatformat:2|intcomma }}
+    </div>
+    <div class="kpi-footer">
+      <span>{{ highest_expense.title }} ({{ highest_expense.date|date:"d M" }})</span>
+    </div>
+    {% else %}
+    <div class="kpi-value" style="font-size: 1.3rem; color: var(--text-dim);">-</div>
+    <div class="kpi-footer">No expenses this month</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Category Spending Breakdown Grid -->
+<div class="finora-card" style="margin-bottom: 1.5rem;">
+  <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-main);">Spend by Category</h3>
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem;">
+    {% for cat in cat_breakdown %}
+    <div style="padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 0.85rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">{{ cat.category__name|default:'Uncategorized' }}</span>
+        <span style="font-size: 0.75rem; color: var(--text-dim);">{{ cat.count }} tx</span>
+      </div>
+      <div style="font-size: 1.25rem; font-weight: 800; color: var(--coral-red); margin-bottom: 0.25rem;">
+        {{ user_currency_symbol }}{{ cat.total|floatformat:2|intcomma }}
+      </div>
+      <div style="height: 4px; border-radius: 2px; background: {{ cat.category__color|default:'#EF4444' }};"></div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1 / -1; padding: 1.5rem; text-align: center; color: var(--text-dim);">
+      No category expenses logged yet for this month.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Expenses Table -->
+<div class="finora-card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <h3 style="font-size: 1rem; font-weight: 700;">Expense History</h3>
+    <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('globalTxModal')" style="font-size: 0.82rem;">
+      <i data-lucide="plus"></i> Add Expense
+    </button>
+  </div>
+
+  <div class="finora-table-wrapper">
+    <table class="finora-table">
+      <thead>
+        <tr>
+          <th>Expense</th>
+          <th>Category</th>
+          <th>Date</th>
+          <th>Method</th>
+          <th style="text-align: right;">Amount</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in page_obj %}
+        <tr>
+          <td>
+            <div style="font-weight: 600; color: var(--text-main);">{{ tx.title }}</div>
+            {% if tx.notes %}<div style="font-size: 0.75rem; color: var(--text-dim);">{{ tx.notes|truncatechars:40 }}</div>{% endif %}
+          </td>
+          <td>
+            {% if tx.category %}
+            <span class="category-badge">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ tx.category.color }};"></span>
+              {{ tx.category.name }}
+            </span>
+            {% else %}
+            <span class="category-badge">General</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.82rem;">
+            <div>{{ tx.date|date:"d M Y" }}</div>
+            {% if tx.time %}
+            <div style="font-size: 0.7rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.25rem;">
+              <i data-lucide="clock" style="width: 10px; height: 10px;"></i> {{ tx.time|time:"H:i" }}
+            </div>
+            {% endif %}
+          </td>
+          <td><span style="font-size: 0.78rem; color: var(--text-dim);">{{ tx.get_payment_method_display }}</span></td>
+          <td style="text-align: right;">
+            <span class="amount-expense" style="font-size: 0.95rem;">-{{ user_currency_symbol }}{{ tx.amount|floatformat:2|intcomma }}</span>
+          </td>
+          <td style="text-align: right;">
+            <div style="display: flex; justify-content: flex-end; gap: 0.4rem;">
+              <a href="{% url 'transaction_update' tx.pk %}" class="btn-icon" style="width: 28px; height: 28px;"><i data-lucide="pencil" style="width: 13px; height: 13px;"></i></a>
+              <form action="{% url 'transaction_delete' tx.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this expense?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-icon" style="width: 28px; height: 28px; color: var(--coral-red);"><i data-lucide="trash-2" style="width: 13px; height: 13px;"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-dim);">
+            No expense records found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

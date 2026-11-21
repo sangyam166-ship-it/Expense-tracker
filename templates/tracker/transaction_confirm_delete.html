@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Deletion &bull; FINORA{% endblock %}
+{% block header_title %}Confirm Deletion{% endblock %}
+{% block header_subtitle %}Irreversible transaction deletion confirmation{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 3rem auto;">
+  <div class="finora-card" style="text-align: center; padding: 2.5rem 2rem;">
+    <div class="kpi-icon-pill red" style="width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 1.25rem;">
+      <i data-lucide="alert-triangle" style="width: 28px; height: 28px;"></i>
+    </div>
+    
+    <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Delete Transaction?</h3>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+      Are you sure you want to delete <b>"{{ transaction.title }}"</b> for <b>{{ user_currency_symbol }}{{ transaction.amount }}</b>? This ledger entry will be permanently removed.
+    </p>
+
+    <form method="POST">
+      {% csrf_token %}
+      <div style="display: flex; justify-content: center; gap: 0.85rem;">
+        <a href="{% url 'transactions' %}" class="btn-finora btn-secondary-finora">Cancel</a>
+        <button type="submit" class="btn-finora btn-danger-finora">Confirm Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
