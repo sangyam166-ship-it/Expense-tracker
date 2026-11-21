@@ -31,6 +31,19 @@ class BudgetSerializer(serializers.ModelSerializer):
         fields = ['id', 'category', 'category_name', 'month', 'year', 'amount', 'spent', 'percentage']
 
 
+class SavingsGoalSerializer(serializers.ModelSerializer):
+    percentage = serializers.FloatField(source='get_percentage', read_only=True)
+    remaining = serializers.DecimalField(source='get_remaining', max_digits=12, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = SavingsGoal
+        fields = [
+            'id', 'title', 'target_amount', 'current_amount',
+            'target_date', 'status', 'color', 'notes',
+            'percentage', 'remaining', 'created_at'
+        ]
+
+
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification

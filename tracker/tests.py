@@ -451,3 +451,86 @@ class FinoraCoreTests(TestCase):
         self.assertIn('pct', first_hist)
         self.assertIn('savings', first_hist)
 
+    def test_api_health_check_endpoint(self):
+        """Ensure /api/health/ returns healthy status and DB connectivity."""
+        response = self.client.get(reverse('api_health_check'))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'healthy')
+        self.assertEqual(data['database'], 'connected')
+        self.assertEqual(data['version'], '2.1.0')
+
+    def test_api_transactions_crud_and_auth(self):
+        """Test REST API transactions listing, creation, and detail."""
+        # 1. Unauthenticated request must be rejected with 403 or 401
+        resp_unauth = self.client.get(reverse('api_transactions_list_create'))
+        self.assertIn(resp_unauth.status_code, [401, 403])
+
+        # 2. Login and test listing
+        self.client.login(username='testuser', password='TestPassword123!')
+        cat = Category.objects.filter(user=self.user, type='EXPENSE').first()
+        tx = Transaction.objects.create(
+            user=self.user,
+            category=cat,
+            type='EXPENSE',
+            title='Coffee with Client',
+            amount=Decimal('150.00'),
+            date=timezone.now().date()
+        )
+
+        resp_list = self.client.get(reverse('api_transactions_list_create'))
+        self.assertEqual(resp_list.status_code, 200)
+        data = resp_list.json()
+        self.assertEqual(data['count'], 1)
+        self.assertEqual(data['results'][0]['title'], 'Coffee with Client')
+
+        # 3. Create via POST
+        create_payload = {
+            'type': 'INCOME',
+            'title': 'Consulting Fee',
+            'amount': '3500.00',
+            'date': timezone.now().date().isoformat(),
+            'category': Category.objects.filter(user=self.user, type='INCOME').first().id,
+            'payment_method': 'BANK_TRANSFER'
+        }
+        resp_create = self.client.post(
+            reverse('api_transactions_list_create'),
+            data=create_payload,
+            content_type='application/json'
+        )
+        self.assertEqual(resp_create.status_code, 201)
+        self.assertTrue(Transaction.objects.filter(user=self.user, title='Consulting Fee').exists())
+
+        # 4. Detail GET and DELETE
+        resp_detail = self.client.get(reverse('api_transaction_detail', kwargs={'pk': tx.pk}))
+        self.assertEqual(resp_detail.status_code, 200)
+        self.assertEqual(resp_detail.json()['title'], 'Coffee with Client')
+
+        resp_delete = self.client.delete(reverse('api_transaction_detail', kwargs={'pk': tx.pk}))
+        self.assertEqual(resp_delete.status_code, 204)
+        self.assertFalse(Transaction.objects.filter(pk=tx.pk).exists())
+
+    def test_api_categories_budgets_and_goals(self):
+        """Test REST API categories, budgets, and savings goals endpoints."""
+        self.client.login(username='testuser', password='TestPassword123!')
+
+        # Categories
+        cat_resp = self.client.get(reverse('api_categories_list'))
+        self.assertEqual(cat_resp.status_code, 200)
+        self.assertGreater(len(cat_resp.json()['results']), 0)
+
+        # Budgets
+        today = timezone.now().date()
+        cat = Category.objects.filter(user=self.user, type='EXPENSE').first()
+        Budget.objects.create(user=self.user, category=cat, month=today.month, year=today.year, amount=Decimal('800.00'))
+        budget_resp = self.client.get(reverse('api_budgets_list'))
+        self.assertEqual(budget_resp.status_code, 200)
+        self.assertEqual(len(budget_resp.json()['results']), 1)
+
+        # Goals
+        SavingsGoal.objects.create(user=self.user, title='Emergency Fund', target_amount=Decimal('50000.00'))
+        goal_resp = self.client.get(reverse('api_goals_list'))
+        self.assertEqual(goal_resp.status_code, 200)
+        self.assertEqual(len(goal_resp.json()['results']), 1)
+        self.assertEqual(goal_resp.json()['results'][0]['title'], 'Emergency Fund')
+

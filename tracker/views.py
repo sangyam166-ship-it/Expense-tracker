@@ -17,8 +17,9 @@ from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework import status
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -35,7 +36,10 @@ from .forms import (
     SavingsGoalForm, SavingsContributionForm, RecurringTransactionForm,
     CategoryForm, CSVImportForm, DataRestoreForm
 )
-from .serializers import TransactionSerializer, BudgetSerializer
+from .serializers import (
+    TransactionSerializer, BudgetSerializer,
+    CategorySerializer, SavingsGoalSerializer, NotificationSerializer
+)
 
 
 # ==============================================================================
@@ -1904,3 +1908,117 @@ def category_delete_view(request, pk):
         cat.delete()
         messages.success(request, f"Custom category '{name}' removed.")
     return redirect('categories')
+
+
+# ==============================================================================
+# REST API V1 ENDPOINTS & SYSTEM TELEMETRY
+# ==============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def api_health_check(request):
+    """System health check probe returning DB connectivity and API version."""
+    from django.db import connection
+    db_status = "connected"
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except Exception as exc:
+        db_status = f"unhealthy: {str(exc)}"
+
+    return Response({
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "service": "FINORA Financial Operating System",
+        "version": "2.1.0",
+        "database": db_status,
+        "timestamp": timezone.now().isoformat()
+    })
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def api_transactions_list_create(request):
+    """List or create transactions for the authenticated user via REST."""
+    user = request.user
+    if request.method == 'GET':
+        qs = Transaction.objects.filter(user=user).select_related('category')
+        tx_type = request.query_params.get('type')
+        if tx_type in ['INCOME', 'EXPENSE']:
+            qs = qs.filter(type=tx_type)
+
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(notes__icontains=search))
+
+        limit = request.query_params.get('limit')
+        if limit and limit.isdigit():
+            qs = qs[:int(limit)]
+        else:
+            qs = qs[:100]
+
+        serializer = TransactionSerializer(qs, many=True)
+        return Response({
+            "count": len(serializer.data),
+            "results": serializer.data
+        })
+
+    elif request.method == 'POST':
+        serializer = TransactionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def api_transaction_detail(request, pk):
+    """Retrieve or delete a single transaction owned by the authenticated user."""
+    try:
+        tx = Transaction.objects.get(pk=pk, user=request.user)
+    except Transaction.DoesNotExist:
+        return Response({"detail": "Transaction not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = TransactionSerializer(tx)
+        return Response(serializer.data)
+    elif request.method == 'DELETE':
+        tx.delete()
+        return Response({"detail": "Transaction deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_categories_list(request):
+    """List all categories available to the authenticated user."""
+    categories = Category.objects.filter(Q(user=request.user) | Q(user__isnull=True))
+    cat_type = request.query_params.get('type')
+    if cat_type in ['INCOME', 'EXPENSE']:
+        categories = categories.filter(type=cat_type)
+    serializer = CategorySerializer(categories, many=True)
+    return Response({"results": serializer.data})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_budgets_list(request):
+    """List budgets for current month for the authenticated user."""
+    today = timezone.now().date()
+    month = request.query_params.get('month', today.month)
+    year = request.query_params.get('year', today.year)
+    budgets = Budget.objects.filter(user=request.user, month=month, year=year).select_related('category')
+    serializer = BudgetSerializer(budgets, many=True)
+    return Response({
+        "month": int(month),
+        "year": int(year),
+        "results": serializer.data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_goals_list(request):
+    """List all savings goals for the authenticated user."""
+    goals = SavingsGoal.objects.filter(user=request.user)
+    serializer = SavingsGoalSerializer(goals, many=True)
+    return Response({"results": serializer.data})

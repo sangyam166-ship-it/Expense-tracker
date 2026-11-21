@@ -9,6 +9,10 @@ class AutoLoginMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Allow REST API v1 endpoints to enforce their own authentication credentials
+        if request.path.startswith('/api/v1/'):
+            return self.get_response(request)
+
         if not request.user.is_authenticated:
             user = User.objects.filter(is_active=True).first()
             if not user:

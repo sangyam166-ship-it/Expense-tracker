@@ -1,5 +1,11 @@
 # FINORA &bull; Smart Personal Financial Operating System
 
+[![FINORA CI](https://github.com/sangyam166-ship-it/Expense-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/sangyam166-ship-it/Expense-tracker/actions/workflows/ci.yml)
+![Python 3.11 | 3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue?logo=python)
+![Django 5.1](https://img.shields.io/badge/Django-5.1-success?logo=django)
+![REST API](https://img.shields.io/badge/API-REST%20v1-informational)
+![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)
+
 A production-quality, responsive Personal Expense Tracker web application built with **Python**, **Django**, and modern Fintech UI styling. Designed specifically for portfolio demonstration, B.Tech CSE final-year capstone, and placement technical interviews.
 
 ---
@@ -95,16 +101,39 @@ python manage.py runserver
 ```
 Open your browser and navigate to: **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)**
 
+### 🐳 Run with Docker (Optional)
+```bash
+docker compose up --build
+```
+
+---
+
+## 🔌 RESTful API (v1)
+
+FINORA exposes a authenticated JSON REST API powered by Django REST Framework:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health/` | Public health probe reporting service and DB connectivity |
+| `GET` | `/api/v1/transactions/` | List user transactions with optional `?type=`, `?search=`, `?limit=` |
+| `POST` | `/api/v1/transactions/` | Create a new transaction via JSON payload |
+| `GET` | `/api/v1/transactions/<id>/` | Retrieve specific transaction details |
+| `DELETE` | `/api/v1/transactions/<id>/` | Delete a specific transaction |
+| `GET` | `/api/v1/categories/` | List available income & expense categories |
+| `GET` | `/api/v1/budgets/` | View current month category budget allocations and spent sums |
+| `GET` | `/api/v1/goals/` | List savings goals with progress percentages and remaining amounts |
+| `GET` | `/api/charts-data/` | Real-time aggregated dataset for Chart.js interactive charts |
+
 ---
 
 ## 🧪 Automated Testing
 
-FINORA includes an automated test suite verifying CRUD operations, transaction calculations, user data isolation, budget limits, savings milestones, and CSV/PDF generation:
+FINORA includes an automated test suite verifying CRUD operations, transaction calculations, user data isolation, budget limits, savings milestones, REST API v1 endpoints, and CSV/PDF generation:
 
 ```bash
 python manage.py test
 ```
-*Output: `Ran 9 tests ... OK`*
+*Output: `Ran 18 tests ... OK`*
 
 ---
 

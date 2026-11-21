@@ -60,6 +60,14 @@ urlpatterns = [
     path('backup/export/', views.backup_data_view, name='backup_data'),
     path('backup/restore/', views.restore_data_view, name='restore_data'),
 
+    # REST API Endpoints & Health Check
+    path('api/health/', views.api_health_check, name='api_health_check'),
+    path('api/v1/transactions/', views.api_transactions_list_create, name='api_transactions_list_create'),
+    path('api/v1/transactions/<int:pk>/', views.api_transaction_detail, name='api_transaction_detail'),
+    path('api/v1/categories/', views.api_categories_list, name='api_categories_list'),
+    path('api/v1/budgets/', views.api_budgets_list, name='api_budgets_list'),
+    path('api/v1/goals/', views.api_goals_list, name='api_goals_list'),
+
     # Notifications
     path('notifications/', views.notifications_view, name='notifications'),
     path('notifications/<int:pk>/read/', views.mark_notification_read_view, name='mark_notification_read'),

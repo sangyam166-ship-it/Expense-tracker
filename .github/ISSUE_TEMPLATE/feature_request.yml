@@ -1,0 +1,29 @@
+name: 💡 Feature Request
+description: Propose a new feature, improvement, or architectural idea
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make FINORA even better? Let us know below!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem or workflow limitation?
+      placeholder: I am always frustrated when...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe what you would like to happen and how it benefits users.
+      placeholder: A clear description of the feature...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions Considered
+      description: Any alternative concepts or features you've evaluated?
