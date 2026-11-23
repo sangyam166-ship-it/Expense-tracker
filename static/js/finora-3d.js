@@ -31,9 +31,9 @@
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
 
-  const colorBlue = new THREE.Color('#10B981');
-  const colorPurple = new THREE.Color('#8B5CF6');
-  const colorCyan = new THREE.Color('#06B6D4');
+  const colorNavy = new THREE.Color('#101828');
+  const colorPurple = new THREE.Color('#7456D8');
+  const colorCyan = new THREE.Color('#35C6E8');
 
   let idx = 0;
   for (let i = 0; i < rows; i++) {
@@ -46,9 +46,9 @@
       positions[idx * 3 + 1] = y;
       positions[idx * 3 + 2] = z;
 
-      // Gradient color mapping
+      // Subtle gradient color mapping
       const ratio = (j / cols) * 0.7 + (i / rows) * 0.3;
-      let pColor = colorBlue.clone().lerp(colorPurple, ratio);
+      let pColor = colorPurple.clone().lerp(colorCyan, ratio);
       if (Math.random() > 0.85) {
         pColor = colorCyan;
       }

@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Dashboard &bull; FINORA Smart Expense Tracker{% endblock %}
-{% block header_title %}Financial Dashboard{% endblock %}
+{% block title %}Dashboard &bull; FINORA Premium Financial OS{% endblock %}
+{% block header_title %}Financial Telemetry{% endblock %}
 {% block header_subtitle %}Real-time liquidity, trends, and budget telemetry for {{ current_month_name }}{% endblock %}
 
 {% block content %}
@@ -11,8 +11,8 @@
   <!-- Total Net Balance -->
   <div class="finora-card kpi-card balance finora-card-interactive">
     <div class="kpi-header">
-      <span class="kpi-title">Net Balance</span>
-      <div class="kpi-icon-pill blue"><i data-lucide="wallet"></i></div>
+      <span class="kpi-title">Total Balance</span>
+      <div class="kpi-icon-pill navy"><i data-lucide="wallet"></i></div>
     </div>
     <div class="kpi-value">
       <span class="animate-counter" data-value="{{ total_balance }}" data-prefix="{{ user_currency_symbol }}">
@@ -27,7 +27,7 @@
   <!-- Monthly Income -->
   <div class="finora-card kpi-card income finora-card-interactive">
     <div class="kpi-header">
-      <span class="kpi-title">Monthly Income</span>
+      <span class="kpi-title">Total Income (Monthly)</span>
       <div class="kpi-icon-pill green"><i data-lucide="trending-up"></i></div>
     </div>
     <div class="kpi-value" style="color: var(--emerald-green);">
@@ -47,7 +47,7 @@
   <!-- Monthly Expenses -->
   <div class="finora-card kpi-card expense finora-card-interactive">
     <div class="kpi-header">
-      <span class="kpi-title">Monthly Expenses</span>
+      <span class="kpi-title">Total Expenses (Monthly)</span>
       <div class="kpi-icon-pill red"><i data-lucide="trending-down"></i></div>
     </div>
     <div class="kpi-value" style="color: var(--coral-red);">
@@ -70,31 +70,122 @@
       <span class="kpi-title">Monthly Savings</span>
       <div class="kpi-icon-pill purple"><i data-lucide="piggy-bank"></i></div>
     </div>
-    <div class="kpi-value" style="color: var(--soft-purple);">
+    <div class="kpi-value" style="color: var(--royal-purple);">
       <span class="animate-counter" data-value="{{ month_savings }}" data-prefix="{{ user_currency_symbol }}">
         {{ user_currency_symbol }}{{ month_savings|floatformat:2|intcomma }}
       </span>
     </div>
     <div class="kpi-footer">
-      <span style="font-weight: 700; color: var(--electric-blue);">{{ savings_percentage }}%</span> of monthly income saved
+      <span style="font-weight: 700; color: var(--royal-purple);">{{ savings_percentage }}%</span> of monthly income saved
     </div>
+  </div>
+</div>
+
+<!-- Monthly Expense Overview & Savings Progress Section -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.75rem;">
+  <!-- Monthly Expense Overview Card -->
+  <div class="finora-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <div class="kpi-icon-pill red" style="width: 32px; height: 32px;"><i data-lucide="activity" style="width: 16px; height: 16px;"></i></div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Monthly Expense Overview</h3>
+      </div>
+      <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">{{ current_month_name }}</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div style="padding: 0.9rem; background: var(--bg-card-hover); border-radius: 0.85rem; border: 1px solid var(--border-card);">
+        <div style="font-size: 0.75rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Daily Avg Spend</div>
+        <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">
+          {{ user_currency_symbol }}{{ daily_avg_expense|floatformat:2|intcomma }}
+        </div>
+      </div>
+
+      <div style="padding: 0.9rem; background: var(--bg-card-hover); border-radius: 0.85rem; border: 1px solid var(--border-card);">
+        <div style="font-size: 0.75rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Projected Spend</div>
+        <div style="font-size: 1.25rem; font-weight: 800; color: var(--coral-red); margin-top: 0.2rem;">
+          {{ user_currency_symbol }}{{ projected_burn|floatformat:2|intcomma }}
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 0.9rem; background: var(--bg-card-hover); border-radius: 0.85rem; border: 1px solid var(--border-card); display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Top Outflow Category</div>
+        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.2rem;">
+          {% if highest_category %}
+            {{ highest_category.category__name }}
+          {% else %}
+            No expenses logged
+          {% endif %}
+        </div>
+      </div>
+      {% if highest_category %}
+      <div style="text-align: right;">
+        <span style="font-size: 1.05rem; font-weight: 800; color: var(--royal-purple);">
+          {{ user_currency_symbol }}{{ highest_category.total|floatformat:2|intcomma }}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Savings Progress Bar Card -->
+  <div class="finora-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <div class="kpi-icon-pill purple" style="width: 32px; height: 32px;"><i data-lucide="target" style="width: 16px; height: 16px;"></i></div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Savings Progress Bar</h3>
+      </div>
+      <span style="font-size: 0.82rem; font-weight: 800; color: var(--royal-purple);">{{ savings_target_pct }}% Achieved</span>
+    </div>
+
+    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+      Monthly target: <b>{{ user_currency_symbol }}{{ savings_target_amount|floatformat:2|intcomma }}</b>. Current net savings: <b>{{ user_currency_symbol }}{{ month_savings|floatformat:2|intcomma }}</b>.
+    </p>
+
+    <!-- Main Savings Progress Bar -->
+    <div class="progress-bar-container" style="height: 14px; margin-bottom: 0.75rem;">
+      <div class="progress-bar-fill purple" style="width: {{ savings_target_pct }}%;"></div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">
+      <span>Saved: <b style="color: var(--emerald-green);">{{ user_currency_symbol }}{{ month_savings|floatformat:2|intcomma }}</b></span>
+      <span>Target: <b style="color: var(--text-main);">{{ user_currency_symbol }}{{ savings_target_amount|floatformat:2|intcomma }}</b></span>
+    </div>
+
+    <!-- Active Savings Goal Pill -->
+    {% if active_goals %}
+    <div style="border-top: 1px solid var(--border-subtle); padding-top: 0.85rem;">
+      <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 0.4rem;">Top Goal Momentum</div>
+      {% with top_goal=active_goals.0 %}
+      <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.25rem;">
+        <span style="font-weight: 600; color: var(--text-main);">{{ top_goal.title }}</span>
+        <span style="color: var(--royal-purple); font-weight: 700;">{{ top_goal.get_percentage }}%</span>
+      </div>
+      <div class="progress-bar-container" style="height: 6px;">
+        <div class="progress-bar-fill success" style="width: {{ top_goal.get_percentage }}%;"></div>
+      </div>
+      {% endwith %}
+    </div>
+    {% endif %}
   </div>
 </div>
 
 <!-- Charts & Visual Analytics Section -->
 <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 1.5rem; margin-bottom: 1.75rem;">
-  <!-- Monthly Trend Chart -->
+  <!-- Monthly Trend Chart: Income vs Expense Graph -->
   <div class="finora-card finora-card-chart">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
       <div>
-        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Income vs Expense Trends</h3>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Income vs Expense Graph</h3>
         <p style="font-size: 0.78rem; color: var(--text-dim);">6-Month rolling cash flow telemetry</p>
       </div>
       <a href="{% url 'analytics' %}" class="btn-finora btn-secondary-finora" style="padding: 0.4rem 0.8rem; font-size: 0.78rem;">
         Full Analytics &rarr;
       </a>
     </div>
-    <div style="height: 280px; position: relative;">
+    <div style="height: 290px; position: relative;">
       <canvas id="monthlyTrendChart"></canvas>
     </div>
   </div>
@@ -103,66 +194,67 @@
   <div class="finora-card finora-card-chart">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
       <div>
-        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Expense Categories</h3>
-        <p style="font-size: 0.78rem; color: var(--text-dim);">Current billing cycle allocation</p>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Spending Category Breakdown</h3>
+        <p style="font-size: 0.78rem; color: var(--text-dim);">Current billing cycle distribution</p>
       </div>
       <a href="{% url 'expenses' %}" class="btn-finora btn-secondary-finora" style="padding: 0.4rem 0.8rem; font-size: 0.78rem;">
         Details
       </a>
     </div>
-    <div style="height: 280px; position: relative;">
+    <div style="height: 290px; position: relative;">
       <canvas id="categoryPieChart"></canvas>
     </div>
   </div>
 </div>
 
-<!-- Budget Telemetry & Savings Goals Grid -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.75rem;">
-  <!-- Overall & Category Budgets Card -->
+<!-- Monthly Budget & Smart Assistant Section -->
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-bottom: 1.75rem;">
+  <!-- Monthly Budget Card -->
   <div class="finora-card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <div class="kpi-icon-pill blue" style="width: 30px; height: 30px;"><i data-lucide="shield-alert" style="width: 16px; height: 16px;"></i></div>
-        <h3 style="font-size: 1rem; font-weight: 700;">Budget Limits</h3>
+        <div class="kpi-icon-pill amber" style="width: 32px; height: 32px;"><i data-lucide="shield-check" style="width: 16px; height: 16px;"></i></div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Monthly Budget</h3>
       </div>
-      <a href="{% url 'budgets' %}" style="font-size: 0.8rem; color: var(--electric-blue); text-decoration: none; font-weight: 600;">Manage Budgets</a>
+      <a href="{% url 'budgets' %}" style="font-size: 0.8rem; color: var(--royal-purple); text-decoration: none; font-weight: 700;">Manage Budgets &rarr;</a>
     </div>
 
     {% if budget_stats %}
-    <div style="padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 0.85rem; margin-bottom: 1rem;">
+    <div style="padding: 1.1rem; background: var(--bg-card-hover); border: 1px solid var(--border-card); border-radius: 0.85rem; margin-bottom: 1rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">Monthly Cap (Overall)</span>
-        <span style="font-size: 0.82rem; font-weight: 700; color: {% if budget_stats.is_exceeded %}var(--coral-red){% elif budget_stats.is_warning %}var(--amber-warning){% else %}var(--emerald-green){% endif %};">
-          {{ budget_stats.percentage }}% used
+        <span style="font-size: 0.88rem; font-weight: 700; color: var(--text-main);">Overall Monthly Cap</span>
+        <span style="font-size: 0.85rem; font-weight: 800; color: {% if budget_stats.is_exceeded %}var(--coral-red){% elif budget_stats.is_warning %}var(--amber-warning){% else %}var(--emerald-green){% endif %};">
+          {{ budget_stats.percentage }}% consumed
         </span>
       </div>
-      <div class="progress-bar-container">
-        <div class="progress-bar-fill {% if budget_stats.is_exceeded %}danger{% elif budget_stats.is_warning %}warning{% else %}normal{% endif %}" style="width: {{ budget_stats.percentage|floatformat:0 }}%;"></div>
+      <div class="progress-bar-container" style="height: 10px;">
+        <div class="progress-bar-fill {% if budget_stats.is_exceeded %}danger{% elif budget_stats.is_warning %}warning{% else %}success{% endif %}" style="width: {{ budget_stats.percentage|floatformat:0 }}%;"></div>
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-dim); margin-top: 0.25rem;">
-        <span>Spent: <b>{{ user_currency_symbol }}{{ budget_stats.spent|floatformat:2 }}</b></span>
-        <span>Limit: <b>{{ user_currency_symbol }}{{ budget_stats.target|floatformat:2 }}</b></span>
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); margin-top: 0.4rem;">
+        <span>Spent: <b style="color: var(--text-main);">{{ user_currency_symbol }}{{ budget_stats.spent|floatformat:2|intcomma }}</b></span>
+        <span>Remaining: <b style="color: {% if budget_stats.remaining < 0 %}var(--coral-red){% else %}var(--emerald-green){% endif %};">{{ user_currency_symbol }}{{ budget_stats.remaining|floatformat:2|intcomma }}</b></span>
       </div>
     </div>
     {% else %}
-    <div style="padding: 1rem; text-align: center; background: var(--bg-surface); border: 1px dashed var(--border-subtle); border-radius: 0.85rem; margin-bottom: 1rem;">
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">No overall monthly budget set for this cycle.</p>
-      <a href="{% url 'budgets' %}" class="btn-finora btn-secondary-finora" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">+ Set Monthly Budget</a>
+    <div style="padding: 1.2rem; text-align: center; background: var(--bg-card-hover); border: 1px dashed var(--border-card); border-radius: 0.85rem; margin-bottom: 1rem;">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.6rem;">No overall monthly budget set for {{ current_month_name }}.</p>
+      <a href="{% url 'budgets' %}" class="btn-finora btn-secondary-finora" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;">+ Set Monthly Budget</a>
     </div>
     {% endif %}
 
     <!-- Top Category Budgets -->
     {% if category_budgets %}
-    <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Category Limits</div>
       {% for cb in category_budgets %}
       <div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.2rem;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.2rem;">
           <span style="color: var(--text-main); font-weight: 600;">{{ cb.category.name }}</span>
-          <span style="color: {% if cb.is_exceeded %}var(--coral-red){% elif cb.is_warning %}var(--amber-warning){% else %}var(--text-muted){% endif %}; font-weight: 600;">
+          <span style="color: {% if cb.is_exceeded %}var(--coral-red){% elif cb.is_warning %}var(--amber-warning){% else %}var(--text-muted){% endif %}; font-weight: 700;">
             {{ user_currency_symbol }}{{ cb.get_spent_amount|floatformat:0 }} / {{ user_currency_symbol }}{{ cb.amount|floatformat:0 }}
           </span>
         </div>
-        <div class="progress-bar-container" style="height: 5px;">
+        <div class="progress-bar-container" style="height: 6px;">
           <div class="progress-bar-fill {% if cb.is_exceeded %}danger{% elif cb.is_warning %}warning{% else %}normal{% endif %}" style="width: {{ cb.get_percentage|floatformat:0 }}%;"></div>
         </div>
       </div>
@@ -171,60 +263,63 @@
     {% endif %}
   </div>
 
-  <!-- Savings Goals Card -->
-  <div class="finora-card">
+  <!-- AI-Powered Finance Assistant Snapshot Card -->
+  <div class="finora-card" style="border-left: 4px solid var(--royal-purple);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <div class="kpi-icon-pill purple" style="width: 30px; height: 30px;"><i data-lucide="target" style="width: 16px; height: 16px;"></i></div>
-        <h3 style="font-size: 1rem; font-weight: 700;">Savings Goals</h3>
+        <div class="kpi-icon-pill purple" style="width: 32px; height: 32px;"><i data-lucide="bot" style="width: 16px; height: 16px;"></i></div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">AI Finance Assistant</h3>
       </div>
-      <a href="{% url 'goals' %}" style="font-size: 0.8rem; color: var(--electric-blue); text-decoration: none; font-weight: 600;">View All Goals</a>
+      <span class="category-badge" style="background: rgba(116, 86, 216, 0.1); color: var(--royal-purple); font-weight: 700; font-size: 0.72rem;">SMART INSIGHTS</span>
     </div>
 
-    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-      {% for goal in active_goals %}
-      <div style="padding: 0.85rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 0.85rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: {{ goal.color }};"></div>
-            <span style="font-size: 0.88rem; font-weight: 600; color: var(--text-main);">{{ goal.title }}</span>
-          </div>
-          <span style="font-size: 0.8rem; font-weight: 700; color: var(--electric-blue);">{{ goal.get_percentage }}%</span>
-        </div>
-        <div class="progress-bar-container" style="height: 6px;">
-          <div class="progress-bar-fill success" style="width: {{ goal.get_percentage }}%; background-color: {{ goal.color }};"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
-          <span>Saved: {{ user_currency_symbol }}{{ goal.current_amount|floatformat:2 }}</span>
-          <span>Target: {{ user_currency_symbol }}{{ goal.target_amount|floatformat:2 }}</span>
-        </div>
+    <div style="padding: 1rem; background: var(--bg-card-hover); border: 1px solid var(--border-card); border-radius: 0.85rem; margin-bottom: 1rem;">
+      <div style="font-size: 0.88rem; color: var(--text-main); line-height: 1.55; margin-bottom: 0.6rem;">
+        {% if highest_category %}
+          Your largest outflow is <b>{{ highest_category.category__name }}</b> at <b>{{ user_currency_symbol }}{{ highest_category.total|floatformat:2|intcomma }}</b>. Total monthly burn is <b>{{ user_currency_symbol }}{{ month_expense|floatformat:2|intcomma }}</b>.
+        {% else %}
+          Keep logging entries to receive personalized telemetry and savings suggestions from your assistant.
+        {% endif %}
       </div>
-      {% empty %}
-      <div style="padding: 1.5rem; text-align: center; color: var(--text-dim); font-size: 0.85rem;">
-        No active savings targets yet. Build a goal for your emergency fund, car, or education!
-        <div style="margin-top: 0.75rem;">
-          <a href="{% url 'goals' %}" class="btn-finora btn-secondary-finora" style="font-size: 0.8rem;">+ Create Savings Goal</a>
-        </div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">
+        {% if savings_percentage >= 20.0 %}
+          <span style="color: var(--emerald-green); font-weight: 700;">&bull; Great Discipline:</span> You are exceeding the standard 20% savings rule!
+        {% elif month_savings > 0 %}
+          <span style="color: var(--amber-warning); font-weight: 700;">&bull; Optimization Tip:</span> Allocating {{ user_currency_symbol }}{{ daily_avg_expense|floatformat:0 }} less per week will accelerate your savings targets.
+        {% else %}
+          <span style="color: var(--coral-red); font-weight: 700;">&bull; Cashflow Warning:</span> Expenses currently outpace monthly income.
+        {% endif %}
       </div>
-      {% endfor %}
+    </div>
+
+    <div style="display: flex; gap: 0.6rem;">
+      <a href="{% url 'ai_assistant' %}" class="btn-finora btn-primary-finora" style="flex: 1; font-size: 0.82rem; padding: 0.5rem 0.85rem;">
+        <i data-lucide="message-square"></i> Ask Assistant
+      </a>
+      <a href="{% url 'analytics' %}" class="btn-finora btn-secondary-finora" style="font-size: 0.82rem; padding: 0.5rem 0.85rem;">
+        Analytics
+      </a>
     </div>
   </div>
 </div>
 
 <!-- Recent Transactions Table -->
 <div class="finora-card finora-table-reveal">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
     <div>
       <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Recent Transactions</h3>
-      <p style="font-size: 0.78rem; color: var(--text-dim);">Latest entries logged into your database</p>
+      <p style="font-size: 0.78rem; color: var(--text-dim);">Live entries logged into your personal finance ledger</p>
     </div>
     <div style="display: flex; gap: 0.6rem;">
       <a href="{% url 'export_csv' %}" class="btn-finora btn-secondary-finora" style="font-size: 0.78rem; padding: 0.45rem 0.85rem;">
         <i data-lucide="download" style="width: 14px; height: 14px;"></i> Export CSV
       </a>
       <a href="{% url 'transactions' %}" class="btn-finora btn-secondary-finora" style="font-size: 0.78rem; padding: 0.45rem 0.85rem;">
-        View All Ledger &rarr;
+        View Ledger &rarr;
       </a>
+      <button class="btn-finora btn-primary-finora" onclick="openFinoraModal('globalTxModal')" style="font-size: 0.78rem; padding: 0.45rem 0.85rem;">
+        <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add Entry
+      </button>
     </div>
   </div>
 
@@ -237,7 +332,7 @@
           <th>Date</th>
           <th>Payment Method</th>
           <th style="text-align: right;">Amount</th>
-          <th style="text-align: right;">Action</th>
+          <th style="text-align: right;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -285,7 +380,7 @@
               <a href="{% url 'transaction_update' tx.pk %}" class="btn-icon" style="width: 28px; height: 28px;" title="Edit">
                 <i data-lucide="pencil" style="width: 13px; height: 13px;"></i>
               </a>
-              <form action="{% url 'transaction_delete' tx.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this transaction?');">
+              <form action="{% url 'transaction_delete' tx.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this transaction?');">
                 {% csrf_token %}
                 <button type="submit" class="btn-icon" style="width: 28px; height: 28px; color: var(--coral-red);" title="Delete">
                   <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
@@ -299,7 +394,7 @@
           <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-dim);">
             <div style="margin-bottom: 0.75rem;"><i data-lucide="file-text" style="width: 36px; height: 36px; stroke-width: 1.5; color: var(--text-dim);"></i></div>
             <div style="font-weight: 600; color: var(--text-muted); font-size: 0.95rem;">No transactions recorded yet</div>
-            <div style="font-size: 0.8rem; margin-top: 0.25rem;">Start tracking by clicking "Add Transaction" above.</div>
+            <div style="font-size: 0.8rem; margin-top: 0.25rem;">Start tracking by clicking "Add Entry" above.</div>
           </td>
         </tr>
         {% endfor %}

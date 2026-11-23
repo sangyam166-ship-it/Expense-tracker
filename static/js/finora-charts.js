@@ -34,8 +34,8 @@ window.finoraCharts = {
     }
 
     const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-    const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
-    const textColor = isDark ? '#94A3B8' : '#64748B';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(16, 24, 40, 0.06)';
+    const textColor = isDark ? '#98A2B3' : '#475467';
     const sym = window.FINORA_CURRENCY_SYMBOL || '₹';
 
     this.monthlyTrendChart = new Chart(ctx, {
@@ -44,18 +44,18 @@ window.finoraCharts = {
         labels: trendData.labels,
         datasets: [
           {
-            label: 'Inflow',
+            label: 'Income (Inflow)',
             data: trendData.income,
-            backgroundColor: 'rgba(16, 185, 129, 0.8)',
-            borderColor: '#10B981',
+            backgroundColor: 'rgba(22, 166, 117, 0.85)',
+            borderColor: '#16A675',
             borderWidth: 1.5,
             borderRadius: 7,
           },
           {
-            label: 'Outflow',
+            label: 'Expenses (Outflow)',
             data: trendData.expenses,
-            backgroundColor: 'rgba(244, 63, 94, 0.8)',
-            borderColor: '#F43F5E',
+            backgroundColor: 'rgba(116, 86, 216, 0.85)',
+            borderColor: '#7456D8',
             borderWidth: 1.5,
             borderRadius: 7,
           }

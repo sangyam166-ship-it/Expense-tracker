@@ -25,8 +25,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Theme Toggle Handler
+  // Theme Toggle Handler & Icon Synchronization
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  function updateThemeToggleIcon(theme) {
+    if (!themeToggleBtn) return;
+    const isDark = theme === 'dark';
+    themeToggleBtn.innerHTML = isDark ? '<i data-lucide="sun-medium"></i>' : '<i data-lucide="moon"></i>';
+    themeToggleBtn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  // Restore saved theme from localStorage immediately if present
+  const savedTheme = localStorage.getItem('finora-theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeToggleIcon(savedTheme);
+  } else {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    updateThemeToggleIcon(currentTheme);
+  }
+
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -35,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       document.documentElement.setAttribute('data-theme', newTheme);
       localStorage.setItem('finora-theme', newTheme);
+      updateThemeToggleIcon(newTheme);
 
       // Async persist to Django session
       fetch('/profile/toggle-theme/?ajax=1', {

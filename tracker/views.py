@@ -28,8 +28,9 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 
 from .models import (
     UserProfile, Category, Transaction, Budget,
-    SavingsGoal, RecurringTransaction, Notification
+    SavingsGoal, RecurringTransaction, Notification, AIChatMessage
 )
+from .assistant import process_assistant_query, get_financial_context
 from .forms import (
     FinoraUserRegistrationForm, FinoraLoginForm, UserProfileForm,
     FinoraPasswordChangeForm, TransactionForm, BudgetForm,
@@ -389,9 +390,21 @@ def dashboard_view(request):
     recurring_week_count = recurring_next_7_days.count()
     recurring_week_sum = recurring_next_7_days.aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
 
-    # Projected monthly burn at current rate
+    # Daily average spend and projected monthly burn
     day_count = max(today.day, 1)
-    projected_burn = round((month_expense / Decimal(day_count)) * Decimal('30'), 2)
+    daily_avg_expense = round(month_expense / Decimal(day_count), 2)
+    projected_burn = round(daily_avg_expense * Decimal('30'), 2)
+
+    # Highest spending category for current month
+    cat_list = list(category_expenses)
+    highest_category = cat_list[0] if cat_list else None
+
+    # Savings progress calculation (against monthly savings target or 20% benchmark)
+    savings_target_amount = profile.monthly_savings_target if profile.monthly_savings_target > Decimal('0.00') else (month_income * Decimal('0.20') if month_income > Decimal('0.00') else Decimal('5000.00'))
+    if savings_target_amount > Decimal('0.00'):
+        savings_target_pct = min(100.0, max(0.0, round(float((month_savings / savings_target_amount) * Decimal('100.0')), 1))) if month_savings > Decimal('0.00') else 0.0
+    else:
+        savings_target_pct = min(100.0, max(0.0, savings_percentage))
 
     # Quick Transaction Form for Modal
     tx_form = TransactionForm(user=user)
@@ -404,10 +417,14 @@ def dashboard_view(request):
         'month_expense': month_expense,
         'month_savings': month_savings,
         'savings_percentage': savings_percentage,
+        'savings_target_amount': savings_target_amount,
+        'savings_target_pct': savings_target_pct,
+        'daily_avg_expense': daily_avg_expense,
+        'highest_category': highest_category,
         'expense_growth_pct': expense_growth_pct,
         'income_growth_pct': income_growth_pct,
         'recent_transactions': recent_transactions,
-        'category_expenses': list(category_expenses),
+        'category_expenses': cat_list,
         'budget_stats': budget_stats,
         'category_budgets': category_budgets,
         'active_goals': active_goals,
@@ -455,24 +472,32 @@ def transactions_list_view(request):
     if payment_method:
         tx_qs = tx_qs.filter(payment_method=payment_method)
 
-    # Filter by Date Range
+    # Filter by Date Range, Month and Year
     start_date = request.GET.get('start_date', '').strip()
     end_date = request.GET.get('end_date', '').strip()
     date_preset = request.GET.get('preset', '').strip()
+    filter_month = request.GET.get('month', '').strip()
+    filter_year = request.GET.get('year', '').strip()
 
     today = timezone.now().date()
-    if date_preset == 'this_month':
-        tx_qs = tx_qs.filter(date__year=today.year, date__month=today.month)
-    elif date_preset == 'last_month':
-        lm = today.replace(day=1) - relativedelta(days=1)
-        tx_qs = tx_qs.filter(date__year=lm.year, date__month=lm.month)
-    elif date_preset == 'this_year':
-        tx_qs = tx_qs.filter(date__year=today.year)
-    else:
-        if start_date:
-            tx_qs = tx_qs.filter(date__gte=start_date)
-        if end_date:
-            tx_qs = tx_qs.filter(date__lte=end_date)
+    if filter_year.isdigit():
+        tx_qs = tx_qs.filter(date__year=int(filter_year))
+    if filter_month.isdigit():
+        tx_qs = tx_qs.filter(date__month=int(filter_month))
+
+    if not filter_year and not filter_month:
+        if date_preset == 'this_month':
+            tx_qs = tx_qs.filter(date__year=today.year, date__month=today.month)
+        elif date_preset == 'last_month':
+            lm = today.replace(day=1) - relativedelta(days=1)
+            tx_qs = tx_qs.filter(date__year=lm.year, date__month=lm.month)
+        elif date_preset == 'this_year':
+            tx_qs = tx_qs.filter(date__year=today.year)
+        else:
+            if start_date:
+                tx_qs = tx_qs.filter(date__gte=start_date)
+            if end_date:
+                tx_qs = tx_qs.filter(date__lte=end_date)
 
     # Filter by Amount Range
     min_amount = request.GET.get('min_amount', '').strip()
@@ -513,6 +538,14 @@ def transactions_list_view(request):
     categories = Category.objects.filter(Q(user=user) | Q(user__isnull=True)).order_by('type', 'name')
     tx_form = TransactionForm(user=user)
 
+    distinct_years = Transaction.objects.filter(user=user).dates('date', 'year', order='DESC')
+    years_available = [d.year for d in distinct_years] if distinct_years else [today.year]
+    months_list = [
+        (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+        (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+        (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+    ]
+
     context = {
         'page_obj': page_obj,
         'categories': categories,
@@ -526,6 +559,10 @@ def transactions_list_view(request):
         'selected_payment_method': payment_method,
         'start_date': start_date,
         'end_date': end_date,
+        'filter_month': filter_month,
+        'filter_year': filter_year,
+        'years_available': years_available,
+        'months_list': months_list,
         'min_amount': min_amount,
         'max_amount': max_amount,
         'date_preset': date_preset,
@@ -2022,3 +2059,96 @@ def api_goals_list(request):
     goals = SavingsGoal.objects.filter(user=request.user)
     serializer = SavingsGoalSerializer(goals, many=True)
     return Response({"results": serializer.data})
+
+
+# ==============================================================================
+# AI-POWERED FINANCE ASSISTANT
+# ==============================================================================
+
+@login_required
+def ai_assistant_view(request):
+    """
+    Dedicated view for the AI-Powered Personal Finance Assistant.
+    Provides intelligent summaries, anomaly detection, savings strategies,
+    and responsive Q&A backed by real transaction data.
+    """
+    user = request.user
+    ctx = get_financial_context(user)
+
+    if request.method == 'POST':
+        query = request.POST.get('query', '').strip()
+        if query:
+            # Store user question
+            AIChatMessage.objects.create(user=user, role='user', message=query)
+            # Process intelligent response
+            reply, intent = process_assistant_query(user, query)
+            AIChatMessage.objects.create(user=user, role='assistant', message=reply, intent=intent)
+        return redirect('ai_assistant')
+
+    # Seed initial message if user has no chat history
+    chat_messages = list(AIChatMessage.objects.filter(user=user).order_by('created_at'))
+    if not chat_messages:
+        welcome_reply, _ = process_assistant_query(user, "summarize monthly spending")
+        initial_msg = AIChatMessage.objects.create(
+            user=user,
+            role='assistant',
+            message=f"👋 Hello **{user.first_name or user.username}**! I am your FINORA AI Personal Finance Assistant. Here is your current financial snapshot:\n\n{welcome_reply}",
+            intent='welcome'
+        )
+        chat_messages = [initial_msg]
+
+    context = {
+        'chat_messages': chat_messages,
+        'financial_ctx': ctx,
+    }
+    return render(request, 'tracker/assistant.html', context)
+
+
+@login_required
+def api_assistant_query(request):
+    """
+    AJAX endpoint for real-time conversation with the AI Finance Assistant.
+    """
+    if request.method == 'POST':
+        import json
+        query = ''
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+                query = data.get('query', '').strip()
+            except Exception:
+                pass
+        else:
+            query = request.POST.get('query', '').strip()
+
+        if not query:
+            return JsonResponse({'status': 'error', 'message': 'Query cannot be empty'}, status=400)
+
+        # Store user query
+        AIChatMessage.objects.create(user=request.user, role='user', message=query)
+
+        # Compute intelligent response
+        reply, intent = process_assistant_query(request.user, query)
+
+        # Store assistant response
+        AIChatMessage.objects.create(user=request.user, role='assistant', message=reply, intent=intent)
+
+        return JsonResponse({
+            'status': 'success',
+            'query': query,
+            'reply': reply,
+            'intent': intent,
+        })
+    return JsonResponse({'status': 'error', 'message': 'POST method required'}, status=405)
+
+
+@login_required
+def api_assistant_clear(request):
+    """
+    Clears the AI chat history for the user.
+    """
+    if request.method == 'POST':
+        AIChatMessage.objects.filter(user=request.user).delete()
+        messages.success(request, "Conversation history cleared.")
+    return redirect('ai_assistant')
+

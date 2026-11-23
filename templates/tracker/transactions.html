@@ -50,15 +50,38 @@
         </select>
       </div>
 
-      <!-- Date Presets -->
+      <!-- Month Filter -->
       <div class="form-group-finora" style="margin-bottom: 0;">
-        <label class="form-label-finora">Date Range</label>
-        <select name="preset" class="form-control-finora form-select-finora">
-          <option value="">All Dates</option>
-          <option value="this_month" {% if date_preset == 'this_month' %}selected{% endif %}>This Month</option>
-          <option value="last_month" {% if date_preset == 'last_month' %}selected{% endif %}>Last Month</option>
-          <option value="this_year" {% if date_preset == 'this_year' %}selected{% endif %}>This Year</option>
+        <label class="form-label-finora">Month</label>
+        <select name="month" class="form-control-finora form-select-finora">
+          <option value="">All Months</option>
+          {% for m_num, m_name in months_list %}
+          <option value="{{ m_num }}" {% if filter_month == m_num|stringformat:"s" %}selected{% endif %}>{{ m_name }}</option>
+          {% endfor %}
         </select>
+      </div>
+
+      <!-- Year Filter -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">Year</label>
+        <select name="year" class="form-control-finora form-select-finora">
+          <option value="">All Years</option>
+          {% for yr in years_available %}
+          <option value="{{ yr }}" {% if filter_year == yr|stringformat:"s" %}selected{% endif %}>{{ yr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Start Date -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">From Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control-finora">
+      </div>
+
+      <!-- End Date -->
+      <div class="form-group-finora" style="margin-bottom: 0;">
+        <label class="form-label-finora">To Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control-finora">
       </div>
 
       <!-- Min Amount -->

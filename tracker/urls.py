@@ -54,6 +54,11 @@ urlpatterns = [
     path('reports/', views.reports_view, name='reports'),
     path('api/charts-data/', views.chart_data_api, name='api_charts_data'),
 
+    # AI-Powered Personal Finance Assistant
+    path('assistant/', views.ai_assistant_view, name='ai_assistant'),
+    path('api/assistant/query/', views.api_assistant_query, name='api_assistant_query'),
+    path('api/assistant/clear/', views.api_assistant_clear, name='api_assistant_clear'),
+
     # Data Export, Import & Backup
     path('export/csv/', views.export_csv_view, name='export_csv'),
     path('reports/pdf/<int:year>/<int:month>/', views.download_pdf_report_view, name='download_pdf_report'),

@@ -276,3 +276,22 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.type}] {self.title} - {self.user.username}"
+
+
+class AIChatMessage(models.Model):
+    ROLE_CHOICES = [
+        ('user', 'User'),
+        ('assistant', 'Assistant'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+    message = models.TextField()
+    intent = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"[{self.role}] {self.user.username}: {self.message[:40]}"

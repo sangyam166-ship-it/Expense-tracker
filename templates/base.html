@@ -5,6 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}FINORA &bull; Smart Personal Expense Tracker{% endblock %}</title>
+
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('finora-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
   
   <!-- Google Fonts: Plus Jakarta Sans & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -103,6 +112,12 @@
 
         <div class="nav-section-title">Intelligence</div>
 
+        <li class="finora-nav-item {% if request.resolver_match.url_name == 'ai_assistant' %}active{% endif %}">
+          <a href="{% url 'ai_assistant' %}">
+            <i data-lucide="bot" style="color: var(--royal-purple);"></i>
+            <span>AI Assistant</span>
+          </a>
+        </li>
         <li class="finora-nav-item {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
           <a href="{% url 'analytics' %}">
             <i data-lucide="bar-chart-3"></i>
